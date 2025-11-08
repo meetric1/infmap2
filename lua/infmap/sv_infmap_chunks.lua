@@ -93,7 +93,7 @@ local function invalidate_constraints(ent)
 	end
 end
 
-local function try_constraint(ent, func, force)
+local function try_constraint(ent, func)
 	if !ent:IsConstraint() then return end
 
 	-- use Ent2 first, since usually its Ent1 (smaller thing) being constrained to Ent2 (bigger thing)
@@ -235,14 +235,6 @@ local function update_entity(ent, chunk_offset)
 		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk)
 		e:SetChunk(chunk_offset)
 		unfucked_setpos(e, pos)
-
-		-- parent support
-		-- TODO: recursive parent support
-		for _, p in ipairs(e:GetChildren()) do
-			if INFMAP.filter_general(p) then continue end
-			
-			p:SetChunk(chunk_offset)
-		end
 	end
 end
 
@@ -314,4 +306,11 @@ function ENTITY:SetChunk(chunk)
 	self.INFMAP_CHUNK = chunk	-- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
 	update_cross_chunk_collision(self)
+
+	-- parent support (recursive)
+	for _, ent in ipairs(self:GetChildren()) do
+		if INFMAP.filter_general(ent) or ent.INFMAP_CHUNK == chunk then continue end
+		
+		ent:SetChunk(chunk)
+	end
 end
