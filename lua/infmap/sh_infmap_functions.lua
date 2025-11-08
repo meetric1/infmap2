@@ -13,9 +13,11 @@ function INFMAP.in_chunk(pos, size)
 	)
 end
 
--- Creates 3 vector objects
+-- Creates 2 vector objects
+local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.localize(pos, size)
-	pos = pos - INFMAP.chunk_origin
+	pos_local:Set(pos)
+	pos_local:Sub(INFMAP.chunk_origin) -- pos_local = pos - INFMAP.chunk_origin (fast)
 
 	local chunk_size = size or INFMAP.chunk_size
 	local chunk_size2 = chunk_size * 2
@@ -23,13 +25,13 @@ function INFMAP.localize(pos, size)
 	
 	-- calculate chunk offset
 	local chunk_offset = Vector(
-		math.floor((pos[1] + chunk_size) * chunk_size2_inv), 
-		math.floor((pos[2] + chunk_size) * chunk_size2_inv), 
-		math.floor((pos[3] + chunk_size) * chunk_size2_inv)
+		math.floor((pos_local[1] + chunk_size) * chunk_size2_inv), 
+		math.floor((pos_local[2] + chunk_size) * chunk_size2_inv), 
+		math.floor((pos_local[3] + chunk_size) * chunk_size2_inv)
 	)
 
 	-- calculate localized position
-	local offset = Vector(pos)
+	local offset = Vector(pos_local)
 	
 	-- wrap coords, we offset vector so coords are 0 to x * 2 instead of -x to x during modulo
 	offset[1] = ((offset[1] + chunk_size) % chunk_size2) - chunk_size
@@ -108,8 +110,9 @@ INFMAP.class_filter = INFMAP.class_filter or {
 function INFMAP.filter_general(ent)
 	if ent:EntIndex() == 0 then return true end
 	if ent.IsConstraint and ent:IsConstraint() then return true end
-
-	return INFMAP.class_filter[ent:GetClass()] and true or false
+	if INFMAP.class_filter[ent:GetClass()] then return true end
+	
+	return false
 end
 
 -- blacklist

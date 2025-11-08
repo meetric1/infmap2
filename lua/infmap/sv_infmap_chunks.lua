@@ -104,12 +104,11 @@ local function try_constraint(ent, func)
 	end
 end
 
-
 hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
 	-- TODO: proper prop spawn chunk handling
-	if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
-		ent:SetChunk(vector_origin)
-	end
+	--if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
+	--	ent:SetChunk(vector_origin)
+	--end
 
 	timer.Simple(0, function()
 		if !IsValid(ent) then return end

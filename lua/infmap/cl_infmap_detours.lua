@@ -4,7 +4,7 @@ local function detour(metatable, func_name, detoured_func, force)
 	local original_func = metatable[original_func_name] or metatable[func_name]
 
 	metatable[original_func_name] = original_func
-	metatable[func_name] = function(self, ...)
+	metatable[func_name] = force and detoured_func or function(self, ...)
 		if self:IsChunkValid() then
 			return detoured_func(self, ...)
 		else
@@ -88,7 +88,7 @@ detour(ENTITY, "__newindex", function(self, key, value)
 	end
 
 	self:INFMAP___newindex(key, value)
-end)
+end, true)
 
 ---------------------
 -- PHYSOBJ DETOURS --
