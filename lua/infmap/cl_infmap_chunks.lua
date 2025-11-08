@@ -138,4 +138,14 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	render.DrawWireframeBox(Vector(), Angle(), -maxsize - co, maxsize - co, blue, true)
 
 	--print(INFMAP.unlocalize(INFMAP.localize(EyePos())))
+
+	--[[
+	local sun = Vector(1,1,1):GetNormalized()
+	for _, brush in ipairs(game.GetWorld():GetBrushSurfaces()) do
+		local vertices = brush:GetVertices()
+		for i = 3, #vertices do
+			local color = ((vertices[1] - vertices[2]):GetNormalized():Cross((vertices[1] - vertices[3]):GetNormalized())):Dot(sun)
+			debugoverlay.Triangle(vertices[1], vertices[i - 1], vertices[i], 0, Color(255 * color, 0, 0, 100))
+		end
+	end]]
 end)

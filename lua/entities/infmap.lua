@@ -7,7 +7,7 @@ ENT.PrintName = "infmap"
 function ENT:Initialize()
     self:SetTrigger(true)
 	
-	local pos = self:GetPos()
+	local pos = self:GetPos() + self:OBBCenter()
 	local size = self:OBBMaxs()[1]
 	SetGlobalVector("INFMAP_CHUNK_ORIGIN", pos)
 	SetGlobalFloat("INFMAP_CHUNK_SIZE", size)
