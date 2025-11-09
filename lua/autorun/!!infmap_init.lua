@@ -9,13 +9,13 @@ INFMAP = INFMAP or {
 --resource.AddWorkshop("2905327911")
 
 -- Load the files
-local function loadfolder(dir)
+local function load_folder(dir)
 	local files, dirs = file.Find(dir .. "*","LUA")
 
 	-- reoccur in directory
 	if dirs then
 		for _, d in ipairs(dirs) do
-			loadfolder(dir .. d .. "/")
+			load_folder(dir .. d .. "/")
 		end
 	end
 
@@ -43,6 +43,6 @@ hook.Add("InitPostEntity", "infmap_init", function()
 	INFMAP.chunk_size = GetGlobalFloat("INFMAP_CHUNK_SIZE")
 
 	if INFMAP.chunk_size != 0 then
-		loadfolder("infmap/")
+		load_folder("infmap/")
 	end
 end)

@@ -7,8 +7,8 @@ function ENTITY:SetChunk(chunk)
 	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride)
 
 	local lp = LocalPlayer()
-	local offset = self:GetChunk() offset:Sub(lp:GetChunk())	-- self.chunk - lp.chunk (fast)
-	if !lp:IsChunkValid() or offset:IsZero() or INFMAP.filter_render(self) then
+	local offset = self:GetChunk() - lp:GetChunk()
+	if !lp:IsChunkValid() or offset == INFMAP.Vector() or INFMAP.filter_render(self) then
 		self.CalcAbsolutePosition = nil
 
 		if self.INFMAP_RENDER_BOUNDS then
@@ -56,7 +56,7 @@ function ENTITY:SetChunk(chunk)
 	-- our local client updated? Shit! We need to update everything else
 	if self != lp then return end
 
-	lp:SetCustomCollisionCheck(!offset:IsZero())
+	lp:SetCustomCollisionCheck(chunk and true or false)
 
 	for _, ent in ents.Iterator() do
 		if ent == lp then continue end	-- gulp
@@ -78,8 +78,7 @@ local function network_var_changed(ent, name, old, new, recurse)
 		return
 	end
 
-	-- if new.x is inf, we set the chunk to nil (server sent invalid chunk data)
-	ent:SetChunk(new[1] != math.huge and new or nil)
+	ent:SetChunk(INFMAP.decode_vector(new))
 end
 
 hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)

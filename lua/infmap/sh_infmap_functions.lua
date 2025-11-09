@@ -1,20 +1,19 @@
 -- useful functions used throughout the lua
 
 -- Is this position in a chunk?
--- Creates 1 vector object
+local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.in_chunk(pos, size)
 	local chunk_size = size or INFMAP.chunk_size
-	pos = pos - INFMAP.chunk_origin
+	pos_local:Set(pos)
+	pos_local:Sub(INFMAP.chunk_origin)
 
 	return (
-		pos[1] > -chunk_size and pos[1] < chunk_size and 
-		pos[2] > -chunk_size and pos[2] < chunk_size and 
-		pos[3] > -chunk_size and pos[3] < chunk_size
+		pos_local[1] > -chunk_size and pos_local[1] < chunk_size and 
+		pos_local[2] > -chunk_size and pos_local[2] < chunk_size and 
+		pos_local[3] > -chunk_size and pos_local[3] < chunk_size
 	)
 end
 
--- Creates 2 vector objects
-local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.localize(pos, size)
 	pos_local:Set(pos)
 	pos_local:Sub(INFMAP.chunk_origin) -- pos_local = pos - INFMAP.chunk_origin (fast)
@@ -24,7 +23,7 @@ function INFMAP.localize(pos, size)
 	local chunk_size2_inv = 1 / chunk_size2
 	
 	-- calculate chunk offset
-	local chunk_offset = Vector(
+	local chunk_offset = INFMAP.Vector(
 		math.floor((pos_local[1] + chunk_size) * chunk_size2_inv), 
 		math.floor((pos_local[2] + chunk_size) * chunk_size2_inv), 
 		math.floor((pos_local[3] + chunk_size) * chunk_size2_inv)
@@ -42,17 +41,17 @@ function INFMAP.localize(pos, size)
 	return offset, chunk_offset
 end
 
--- Creates 1 vector
 function INFMAP.unlocalize(pos, chunk)
-	local offset = Vector(chunk)
-	offset:Mul(INFMAP.chunk_size * 2)
-	offset:Add(pos)
-	
-	return offset
+	local chunk_size_2 = INFMAP.chunk_size * 2
+
+	return Vector(
+		chunk[1] * chunk_size_2 + pos[1],
+		chunk[2] * chunk_size_2 + pos[2],
+		chunk[3] * chunk_size_2 + pos[3]
+	)
 end
 
 -- replace with util.IsBoxIntersectingBox if desired
--- Creates 0 vectors
 function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
 	return (
 		(max_b[1] >= min_a[1] and min_b[1] <= max_a[1]) and 
@@ -69,9 +68,11 @@ end
 	-- spawn filter
 	-- (potentially) constraint filter
 
--- blacklist of all the classes that are useless (fully filtered by all)
+-- blacklist of all the classes that are useless (never wrapped)
 INFMAP.class_filter = INFMAP.class_filter or {
+	["infmap"] = true,
 	["infmap_clone"] = true,
+	["infmap_vbsp"] = true,
 	["physgun_beam"] = true,
 	["worldspawn"] = true,
 	["info_particle_system"] = true,
@@ -122,45 +123,48 @@ INFMAP.teleport_class_filter = {
 	["prop_vehicle_jeep"] = true, -- super fucked
 }
 
--- teleport filter - which objects should be wrapped?
+-- teleport filter - which objects shouldnt be wrapped?
 function INFMAP.filter_teleport(ent)
 	if !ent:IsChunkValid() then return true end
-	if ent:IsPlayer() and !ent:Alive() then return true end
+	if ent:IsPlayerHolding() then return true end
 	if IsValid(ent:GetParent()) then return true end
+	if ent:IsPlayer() and !ent:Alive() then return true end
 	if ent.INFMAP_CONSTRAINED and (ent.INFMAP_CONSTRAINED.parent != ent) then return true end
 	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
 
 	return INFMAP.filter_general(ent)
 end
 
--- collision filter - which entities should have cross-chunk collision?
+-- collision filter - which entities shouldnt have cross-chunk collision?
 function INFMAP.filter_collision(ent)
-	if ent:BoundingRadius() < 10 then return true end -- no tiny props, too much compute
-	if !ent:IsChunkValid() then return true end
 	if ent:IsPlayer() then return true end -- too bitchy
-	if IsValid(ent:GetParent()) then return true end
-	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
 	if !ent:GetModel() then return true end
-
-	return INFMAP.filter_general(ent)
-end
-
--- renderer filter - which entities should render properly?
-function INFMAP.filter_render(ent)
 	if !ent:IsChunkValid() then return true end
-	if ent:GetNoDraw() then return true end
+	if IsValid(ent:GetParent()) then return true end
+	if ent:BoundingRadius() < 10 then return true end -- no tiny props, too much compute
+	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
 
 	return INFMAP.filter_general(ent)
 end
 
--- some entities require a full "fancy" rendering detour using the cam library
+-- renderer filter - which entities shouldnt be rendered?
+function INFMAP.filter_render(ent)
+	if ent:GetNoDraw() then return true end
+	if !ent:IsChunkValid() then return true end
+
+	return INFMAP.filter_general(ent)
+end
+
+-- fancy render filter - some entities require a full "fancy" rendering detour using the cam library
 function INFMAP.filter_render_fancy(ent)
 	if ent:IsPlayer() then return true end
 	if ent:IsWeapon() then return true end
 	if ent:IsRagdoll() then return true end
+
+	return false
 end
 
--- constraint filter - which entities should we continue to parse during constraint creation
+-- constraint filter - which entities should we ignore during constraint creation parsing
 function INFMAP.filter_constraint(ent)
 	if !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
