@@ -239,7 +239,7 @@ end
 
 -- which entities should be checked per frame (optimization filter)
 local check_ents = {}
-timer.Create("infmap_localize_check", 0.1, 0, function()
+timer.Create("infmap_wrap_check", 0.1, 0, function()
 	check_ents = {}
 
 	for _, ent in ents.Iterator() do
@@ -252,7 +252,7 @@ timer.Create("infmap_localize_check", 0.1, 0, function()
 end)
 
 -- do actual teleporting
-hook.Add("Think", "infmap_localize", function()
+hook.Add("Think", "infmap_wrap", function()
 	for _, ent in ipairs(check_ents) do
 		if !IsValid(ent) then continue end
 		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() or INFMAP.filter_teleport(ent) then continue end
@@ -264,6 +264,11 @@ hook.Add("Think", "infmap_localize", function()
 		-- time to teleport
 		local _, chunk_offset = INFMAP.localize(ent:INFMAP_GetPos())
 		chunk_offset:Add(ent:GetChunk())
+
+		-- hook support (ugh.. slow..)
+		local err, prevent = pcall(function() hook.Run("OnChunkWrap", ent, chunk_offset) end)
+		if !err and prevent then continue end
+
 		update_entity(ent, chunk_offset)
 
 		-- if we're holding something, force it into our chunk
@@ -291,6 +296,9 @@ local ENTITY = FindMetaTable("Entity")
 
 local nil_chunk = Vector(math.huge)
 function ENTITY:SetChunk(chunk)
+	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
+	if !err and prevent then return end
+
 	-- !!!HACK!!! we need to tell the client to invalidate this entities chunk
 	-- to avoid extra netmessage spaz and to ensure packets arrive at the same time, we send a predetermined invalid chunk to the client
 	-- the client will then see this and set their chunk to nil

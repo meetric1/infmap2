@@ -13,13 +13,15 @@ function ENT:StartTouch(ent)
 end
 
 function ENT:EndTouch(ent)
+	if ent:IsMarkedForDeletion() then return end
 
+	print("EndTouch", self, ent)
 end
 
 function ENT:KeyValue(key, value)
     if key == "chunk" then
-        -- Vector or possibly string of chunk pos
+		self.INFMAP_VBSP_CHUNK = Vector(string.Split(value, " "))
     elseif key == "position" then
-        -- Local to chunk
+        self.INFMAP_VBSP_POS = Vector(string.Split(value, " "))
     end
 end
