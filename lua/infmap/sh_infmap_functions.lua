@@ -1,5 +1,65 @@
 -- useful functions used throughout the lua
 
+-- little endian encoding, in base 255 (since we can't represent 0x00 in a string)
+-- encoded using 7 bytes per number (since double can only represent integers to 2^53)
+	-- giving us a maximum positive and negative value of 255^6 * 127, which is just shy of 2^(7*8-1)
+function INFMAP.encode_vector(vec)
+	if vec == nil then return "" end
+	local str = ""
+
+	for i = 1, 3 do
+		local negative = false
+		local num = vec[i]
+		if num < 0 then
+			negative = true
+			num = -num
+		end
+
+		for i = 1, 6 do
+			str = str .. string.char(num % 255 + 1)
+			num = math.floor(num / 255)
+		end
+
+		if negative then
+			str = str .. string.char(num % 127 + 1 + 0x80)
+		else
+			str = str .. string.char(num % 127 + 1)
+		end
+	end
+
+	return str
+end
+
+function INFMAP.decode_vector(str)
+	if #str <= 0 then return nil end
+	local vec = INFMAP.Vector()
+
+	local index = #str
+	for i = 3, 1, -1 do
+		local negative = false
+		local num = string.byte(str, index, index) - 1
+		if num > 0x80 then
+			negative = true
+			num = num - 0x80
+		end
+		index = index - 1
+
+		for i = 1, 6 do
+			num = num * 255
+			num = num + string.byte(str, index, index) - 1
+			index = index - 1
+		end
+		
+		if negative then
+			vec[i] = -num
+		else
+			vec[i] = num
+		end
+	end
+
+	return vec
+end
+
 -- Is this position in a chunk?
 local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.in_chunk(pos, size)
@@ -109,7 +169,7 @@ INFMAP.class_filter = INFMAP.class_filter or {
 
 -- base filter - nothing gets through this
 function INFMAP.filter_general(ent)
-	if ent:EntIndex() == 0 then return true end
+	if ent:IsWorld() then return true end
 	if ent.IsConstraint and ent:IsConstraint() then return true end
 	if INFMAP.class_filter[ent:GetClass()] then return true end
 	
@@ -126,7 +186,6 @@ INFMAP.teleport_class_filter = {
 -- teleport filter - which objects shouldnt be wrapped?
 function INFMAP.filter_teleport(ent)
 	if !ent:IsChunkValid() then return true end
-	if ent:IsPlayerHolding() then return true end
 	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
 	if ent.INFMAP_CONSTRAINED and (ent.INFMAP_CONSTRAINED.parent != ent) then return true end
