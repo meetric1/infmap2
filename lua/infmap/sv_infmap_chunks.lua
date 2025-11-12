@@ -35,23 +35,29 @@ end
 -----------------
 
 -- merges entity
-local function merge(ent, constrained, offset)
-	constrained[ent] = true
-	ent.INFMAP_CONSTRAINED = constrained
-	local chunk = ent:GetChunk() - offset
-	unfucked_setpos(ent, INFMAP.unlocalize(ent:INFMAP_GetPos(), chunk))
-	ent:SetChunk(offset)
+function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
+	local chunk_offset = ent2_constrained.parent:GetChunk()
+
+	for e, _ in pairs(ent1_constrained) do
+		if !isentity(e) then continue end
+
+		ent2_constrained[e] = true
+		e.INFMAP_CONSTRAINED = ent2_constrained
+		local chunk = e:GetChunk() - chunk_offset
+		if !chunk:IsZero() then
+			unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk))
+			e:SetChunk(chunk_offset)
+		end
+	end
 end
 
 -- welcome to my insanely fuckass algorithm
+-- rest of the algorithm in sv_infmap_detours.lua!
 function INFMAP.validate_constraints(ent, prev)
 	if INFMAP.filter_constraint(ent) then return end
 
 	if !ent.INFMAP_CONSTRAINED then
 		ent.INFMAP_CONSTRAINED = {[ent] = true, ["parent"] = ent}
-	elseif !prev then
-		-- we only need to recurse for newly created constraints
-		return
 	end
 
 	if IsValid(prev) then
@@ -62,24 +68,17 @@ function INFMAP.validate_constraints(ent, prev)
 			return 
 		end
 
-		-- merge ent_constrained -> prev_constrained
-		local chunk_offset = prev:GetChunk()
-		for e, _ in pairs(ent_constrained) do
-			if !isentity(e) then continue end
-
-			merge(e, prev_constrained, chunk_offset)
-		end
-
-		-- flip
-		prev_constrained.parent = ent_constrained.parent
+		INFMAP.merge_constraints(ent_constrained, prev_constrained)
 	end
 
 	-- recurse
 	for _, constrained in ipairs(constraint.GetTable(ent)) do
+		if constrained.Constraint:GetClass() == "logic_collision_pair" then continue end
+
 		for _, e in pairs(constrained.Entity) do
 			e = e.Entity
-			if e == ent then continue end
 
+			if e == ent then continue end
 			INFMAP.validate_constraints(e, ent)
 		end
 	end
@@ -93,35 +92,18 @@ function INFMAP.invalidate_constraints(ent)
 		if !IsValid(e) or !isentity(e) then continue end
 
 		e.INFMAP_CONSTRAINED = nil
+		e.INFMAP_DIRTY_CHECK = true
 	end
 end
-
-local function try_constraint(ent, func)
-	-- use Ent2 first, since usually its Ent1 (smaller thing) being constrained to Ent2 (bigger thing)
-	for _, e in ipairs({ent.Ent2, ent.Ent1}) do
-		if IsValid(e) and e.INFMAP_CONSTRAINED and !INFMAP.filter_constraint(e) then
-			func(e, NULL)
-		end
-	end
-end
-
-hook.Add("OnEntityCreated", "infmap_constraint", function(ent)
-	-- TODO: proper prop spawn chunk handling
-	if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
-		ent:SetChunk(vector_origin)
-	end
-
-	timer.Simple(0, function()
-		if !IsValid(ent) or ent:IsConstraint() then return end
-
-		try_constraint(ent, INFMAP.validate_constraints)
-	end)
-end)
 
 hook.Add("EntityRemoved", "infmap_constraint", function(ent)
-	if !IsValid(ent) or ent:IsConstraint() then return end
+	if !IsValid(ent) or !ent:IsConstraint() then return end
 
-	try_constraint(ent, INFMAP.invalidate_constraints)
+	for _, e in ipairs({ent.Ent1, ent.Ent2}) do
+		if !IsValid(e) then continue end
+		
+		INFMAP.invalidate_constraints(e)
+	end
 end)
 
 ---------------------
@@ -244,17 +226,17 @@ timer.Create("infmap_wrap_check", 0.1, 0, function()
 	for _, ent in ents.Iterator() do
 		update_cross_chunk_collision(ent)
 
-		if !ent:GetVelocity():IsZero() and !INFMAP.filter_teleport(ent) then 
+		if (!ent:GetVelocity():IsZero() or ent.INFMAP_DIRTY_CHECK) and !INFMAP.filter_teleport(ent) then 
 			table.insert(check_ents, ent)
 		end
 	end
 end)
 
--- do actual teleporting
+-- do wrapping (teleporting)
 hook.Add("Think", "infmap_wrap", function()
 	for _, ent in ipairs(check_ents) do
 		if !IsValid(ent) then continue end
-		if INFMAP.in_chunk(ent:INFMAP_GetPos()) then continue end
+		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() then continue end
 
 		INFMAP.validate_constraints(ent)
 		if INFMAP.filter_teleport(ent) then continue end -- required check just incase the constraint table updated
@@ -281,11 +263,23 @@ hook.Add("Think", "infmap_wrap", function()
 	end
 end)
 
+---------------------
+-- ENTITY SPAWNING --
+---------------------
+
 hook.Add("PlayerSpawn", "infmap_respawn", function(ply, trans)
 	if ply:IsChunkValid() and !trans then
 		ply:SetChunk(INFMAP.Vector())
 	end
 end)
+
+hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
+	-- TODO: proper prop spawn chunk handling
+	if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
+		ent:SetChunk(vector_origin)
+	end
+end)
+
 
 -------------
 -- GLOBALS --
@@ -295,15 +289,15 @@ local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
 	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
 	if !err and prevent then return end
-
+	
 	if chunk == nil then
 		INFMAP.invalidate_constraints(self)
 	else
-		chunk = INFMAP.Vector(chunk)	-- copy
+		chunk = INFMAP.Vector(chunk) -- copy
 	end
 
 	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(chunk))
-	self.INFMAP_CHUNK = chunk	-- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
+	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
 	update_cross_chunk_collision(self)
 

@@ -8,7 +8,7 @@ function ENTITY:SetChunk(chunk)
 
 	local lp = LocalPlayer()
 	local offset = self:GetChunk() - lp:GetChunk()
-	if !lp:IsChunkValid() or offset == INFMAP.Vector() or INFMAP.filter_render(self) then
+	if !lp:IsChunkValid() or offset:IsZero() or INFMAP.filter_render(self) then
 		self.CalcAbsolutePosition = nil
 
 		if self.INFMAP_RENDER_BOUNDS then
