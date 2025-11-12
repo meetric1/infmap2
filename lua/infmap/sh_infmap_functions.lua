@@ -38,7 +38,7 @@ function INFMAP.decode_vector(str)
 	for i = 3, 1, -1 do
 		local negative = false
 		local num = string.byte(str, index, index) - 1
-		if num > 0x80 then
+		if num >= 0x80 then
 			negative = true
 			num = num - 0x80
 		end
