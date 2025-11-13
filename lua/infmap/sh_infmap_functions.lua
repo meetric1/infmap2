@@ -60,6 +60,39 @@ function INFMAP.decode_vector(str)
 	return vec
 end
 
+-- setting position kills all velocity
+function INFMAP.unfucked_setpos(ent, pos)
+	-- clamp to source bounds
+	pos = Vector(
+		math.Clamp(pos[1], -2^14+64, 2^14-64),
+		math.Clamp(pos[2], -2^14+64, 2^14-64),
+		math.Clamp(pos[3], -2^14+64, 2^14-64)
+	)
+
+	-- ragdoll moment
+	if ent:IsRagdoll() then
+		for i = 0, ent:GetPhysicsObjectCount() - 1 do
+			local phys = ent:GetPhysicsObjectNum(i)
+			local vel = phys:GetVelocity()
+			local diff = phys:INFMAP_GetPos() - ent:INFMAP_GetPos()
+		
+			phys:INFMAP_SetPos(pos + diff)
+			phys:SetVelocity(vel)
+		end
+
+		--ent:INFMAP_SetPos(pos)
+	else
+		local phys = ent:GetPhysicsObject()
+		if IsValid(phys) then 
+			local vel = phys:GetVelocity()
+			ent:INFMAP_SetPos(pos)
+			phys:SetVelocity(vel)
+		else
+			ent:INFMAP_SetPos(pos)
+		end
+	end
+end
+
 -- Is this position in a chunk?
 local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.in_chunk(pos, size)
@@ -125,8 +158,8 @@ end
 	-- cross chunk collision filter
 	-- rendering filter
 	-- should teleport filter
-	-- spawn filter
-	-- (potentially) constraint filter
+	-- constraint filter
+	-- valid constraint filter
 
 -- blacklist of all the classes that are useless (never wrapped)
 INFMAP.class_filter = INFMAP.class_filter or {
@@ -165,6 +198,7 @@ INFMAP.class_filter = INFMAP.class_filter or {
 	["player_pickup"] = true,
 	["phys_spring"] = true,
 	["sky_camera"] = true,
+	["logic_collision_pair"] = true,
 }
 
 -- base filter - nothing gets through this
@@ -188,7 +222,7 @@ function INFMAP.filter_teleport(ent)
 	if !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
-	if ent.INFMAP_CONSTRAINED and (ent.INFMAP_CONSTRAINED.parent != ent) then return true end
+	if ent.INFMAP_CONSTRAINTS and (ent.INFMAP_CONSTRAINTS.parent != ent) then return true end
 	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
 
 	return INFMAP.filter_general(ent)
@@ -223,17 +257,25 @@ function INFMAP.filter_render_fancy(ent)
 	return false
 end
 
--- constraint filter - which entities should we ignore during constraint creation parsing
-function INFMAP.filter_constraint(ent)
+-- constraint filter - which entities should we ignore during constraint parsing
+function INFMAP.filter_constraint_parsing(ent)
 	if !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
 
 	return INFMAP.filter_general(ent)
 end
 
+-- constraint filter- what constraints aren't actually constraints?
+function INFMAP.filter_constraint(ent)
+	if ent:GetClass() == "logic_collision_pair" then return true end
+
+	return false
+end
+
 -- algorithm to split concave (and convex) shapes given a set of triangles
 -- tris are in the format {{pos = value}, {pos = value2}}
 -- code based on Glass: Rewrite
+/*
 function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	if !tris then return {} end
 
@@ -366,4 +408,4 @@ function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	end]]
 
 	return split_tris
-end
+end*/

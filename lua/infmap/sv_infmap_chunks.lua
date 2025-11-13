@@ -1,52 +1,26 @@
--- setting position kills all velocity
-local source_bounds = 2^14 - 64
-local math_Clamp = math.Clamp
-local function unfucked_setpos(ent, pos)
-	pos[1] = math_Clamp(pos[1], -source_bounds, source_bounds)
-	pos[2] = math_Clamp(pos[2], -source_bounds, source_bounds)
-	pos[3] = math_Clamp(pos[3], -source_bounds, source_bounds)
-
-	-- ragdoll moment
-	if ent:IsRagdoll() then
-		for i = 0, ent:GetPhysicsObjectCount() - 1 do
-			local phys = ent:GetPhysicsObjectNum(i)
-			local vel = phys:GetVelocity()
-			local diff = phys:INFMAP_GetPos() - ent:INFMAP_GetPos()
-		
-			phys:INFMAP_SetPos(pos + diff)
-			phys:SetVelocity(vel)
-		end
-
-		ent:INFMAP_SetPos(pos)
-	else
-		local phys = ent:GetPhysicsObject()
-		if IsValid(phys) then 
-			local vel = phys:GetVelocity()
-			ent:INFMAP_SetPos(pos)
-			phys:SetVelocity(vel)
-		else
-			ent:INFMAP_SetPos(pos)
-		end
-	end
-end
-
 -----------------
 -- CONSTRAINTS --
 -----------------
 
 -- merges entity
 function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
-	local chunk_offset = ent2_constrained.parent:GetChunk()
+	if ent1_constrained == ent2_constrained then 
+		return 
+	end
 
+	local ent2 = ent2_constrained.parent
+	local chunk_valid = ent2:IsChunkValid()
+	local chunk_offset = ent2:GetChunk()
+	
 	for e, _ in pairs(ent1_constrained) do
 		if !isentity(e) then continue end
 
 		ent2_constrained[e] = true
-		e.INFMAP_CONSTRAINED = ent2_constrained
+		e.INFMAP_CONSTRAINTS = ent2_constrained
 		local chunk = e:GetChunk() - chunk_offset
 		if !chunk:IsZero() then
-			unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk))
-			e:SetChunk(chunk_offset)
+			INFMAP.unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk))
+			e:SetChunk(chunk_valid and chunk_offset or nil)
 		end
 	end
 end
@@ -54,15 +28,15 @@ end
 -- welcome to my insanely fuckass algorithm
 -- rest of the algorithm in sv_infmap_detours.lua!
 function INFMAP.validate_constraints(ent, prev)
-	if INFMAP.filter_constraint(ent) then return end
+	if INFMAP.filter_constraint_parsing(ent) then return end
 
-	if !ent.INFMAP_CONSTRAINED then
-		ent.INFMAP_CONSTRAINED = {[ent] = true, ["parent"] = ent}
+	if !ent.INFMAP_CONSTRAINTS then
+		ent.INFMAP_CONSTRAINTS = {[ent] = true, ["parent"] = ent}
 	end
 
 	if IsValid(prev) then
-		local prev_constrained = prev.INFMAP_CONSTRAINED
-		local ent_constrained = ent.INFMAP_CONSTRAINED
+		local prev_constrained = prev.INFMAP_CONSTRAINTS
+		local ent_constrained = ent.INFMAP_CONSTRAINTS
 		if prev_constrained == ent_constrained then
 			-- already checked
 			return 
@@ -73,7 +47,7 @@ function INFMAP.validate_constraints(ent, prev)
 
 	-- recurse
 	for _, constrained in ipairs(constraint.GetTable(ent)) do
-		if constrained.Constraint:GetClass() == "logic_collision_pair" then continue end
+		if INFMAP.filter_constraint(constrained.Constraint) then continue end
 
 		for _, e in pairs(constrained.Entity) do
 			e = e.Entity
@@ -85,13 +59,13 @@ function INFMAP.validate_constraints(ent, prev)
 end
 
 function INFMAP.invalidate_constraints(ent)
-	local constrained = ent.INFMAP_CONSTRAINED
+	local constrained = ent.INFMAP_CONSTRAINTS
 	if !constrained then return end -- duh, already invalid
 
 	for e, _ in pairs(constrained) do
 		if !IsValid(e) or !isentity(e) then continue end
 
-		e.INFMAP_CONSTRAINED = nil
+		e.INFMAP_CONSTRAINTS = nil
 		e.INFMAP_DIRTY_CHECK = true
 	end
 end
@@ -114,7 +88,7 @@ local player_pickups = {}
 local function player_pickup(ply, ent) -- key = player, value = prop
 	player_pickups[ply] = ent
 	INFMAP.validate_constraints(ent)
-	ent.INFMAP_CONSTRAINED.parent = ent
+	ent.INFMAP_CONSTRAINTS.parent = ent
 end
 
 local function player_drop(ply, ent) 
@@ -202,7 +176,7 @@ end
 ---------------------
 
 local function update_entity(ent, chunk_offset)
-	for e, _ in pairs(ent.INFMAP_CONSTRAINED) do
+	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 
 		-- sorry other players..
@@ -214,7 +188,7 @@ local function update_entity(ent, chunk_offset)
 		local chunk = e:GetChunk() - chunk_offset
 		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk)
 		e:SetChunk(chunk_offset)
-		unfucked_setpos(e, pos)
+		INFMAP.unfucked_setpos(e, pos)
 	end
 end
 
@@ -256,7 +230,7 @@ hook.Add("Think", "infmap_wrap", function()
 			local holding = player_pickups[ent]
 			if IsValid(holding) then
 				INFMAP.validate_constraints(holding)
-				holding.INFMAP_CONSTRAINED.parent = holding
+				holding.INFMAP_CONSTRAINTS.parent = holding
 				update_entity(holding, chunk_offset)
 			end
 		end
@@ -290,9 +264,7 @@ function ENTITY:SetChunk(chunk)
 	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
 	if !err and prevent then return end
 	
-	if chunk == nil then
-		INFMAP.invalidate_constraints(self)
-	else
+	if chunk != nil then
 		chunk = INFMAP.Vector(chunk) -- copy
 	end
 

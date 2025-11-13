@@ -73,10 +73,9 @@ local constraint_classes = {
 	["phys_torque"] = true
 }
 
--- constraints detour
 -- !!!HACK!!! GetPhysConstraintObjects and GetConstrainedEntities return `nil` before :Spawn is called, requiring a detour
 detour(ENTITY, "SetPhysConstraintObjects", function(self, phys1, phys2)
-	if self:GetClass() != "logic_collision_pair" then
+	if !INFMAP.filter_constraint(self) then
 		local ent1 = phys1:GetEntity()
 		local ent2 = phys2:GetEntity()
 		if IsValid(ent1) and IsValid(ent2) then
@@ -111,12 +110,7 @@ detour(ENTITY, "Spawn", function(self)
 	-- Step 2: localize prop locations
 	INFMAP.validate_constraints(ent1)
 	INFMAP.validate_constraints(ent2)
-
-	local ent1_constrained = ent1.INFMAP_CONSTRAINED
-	local ent2_constrained = ent2.INFMAP_CONSTRAINED
-	if ent1_constrained and ent2_constrained then
-		INFMAP.merge_constraints(ent2_constrained, ent1_constrained)
-	end
+	INFMAP.merge_constraints(ent2.INFMAP_CONSTRAINTS, ent1.INFMAP_CONSTRAINTS)
 
 	-- Step 3: Spawn
 	self:INFMAP_Spawn()

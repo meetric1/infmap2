@@ -17,6 +17,7 @@ function ENTITY:SetChunk(chunk)
 		end
 
 		self:DisableMatrix("RenderMultiply")
+		self:SetLOD(-1)
 	else
 		-- visually offset entity
 		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, offset)
@@ -50,6 +51,7 @@ function ENTITY:SetChunk(chunk)
 				self:EnableMatrix("RenderMultiply", offset_ang)
 			end
 			self:CalcAbsolutePosition(self:INFMAP_GetPos(), self:GetAngles())
+			self:SetLOD(0)
 		end
 	end
 
