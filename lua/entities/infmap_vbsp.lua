@@ -90,12 +90,10 @@ hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
 	-- TODO: optimize (use hash table)
 	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp")) do
 		if prev_chunk == vbsp:GetChunk() then
-			print("Removed", ent, vbsp)
 			vbsp.INFMAP_VBSP_CHECK[ent] = nil
 		end
 
 		if chunk == vbsp:GetChunk() then
-			print("Added", ent, vbsp)
 			vbsp.INFMAP_VBSP_CHECK[ent] = true
 		end
 	end
