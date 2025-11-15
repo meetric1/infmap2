@@ -211,6 +211,16 @@ end
 local function detour_trace(trace_func, data, extra)
 	-- store original data that will be overwritten
 	local old_start = data.start
+
+	-- early check, incase we're in source bounds...
+	if 
+		old_start[1] < 2^14 and old_start[1] > -2^14 and
+		old_start[2] < 2^14 and old_start[2] > -2^14 and
+		old_start[3] < 2^14 and old_start[3] > -2^14
+	then
+		return trace_func(data, extra)
+	end
+
 	local old_endpos = data.endpos
 	local old_filter = data.filter
 
