@@ -146,11 +146,10 @@ end
 
 -- replace with util.IsBoxIntersectingBox if desired
 function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
-	return (
-		(max_b[1] >= min_a[1] and min_b[1] <= max_a[1]) and 
-		(max_b[2] >= min_a[2] and min_b[2] <= max_a[2]) and 
-		(max_b[3] >= min_a[3] and min_b[3] <= max_a[3])
-	)
+	return
+		max_b[1] >= min_a[1] and min_b[1] <= max_a[1] and 
+		max_b[2] >= min_a[2] and min_b[2] <= max_a[2] and 
+		max_b[3] >= min_a[3] and min_b[3] <= max_a[3]
 end
 
 -- we need more filters, as there are a *lot* of weird exceptions. we need:
@@ -218,8 +217,8 @@ INFMAP.teleport_class_filter = {
 }
 
 -- teleport filter - which objects shouldnt be wrapped?
-function INFMAP.filter_teleport(ent)
-	if !ent:IsChunkValid() then return true end
+function INFMAP.filter_teleport(ent, ignore_chunk_valid)
+	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
 	if ent.INFMAP_CONSTRAINTS and (ent.INFMAP_CONSTRAINTS.parent != ent) then return true end
@@ -259,7 +258,6 @@ end
 
 -- constraint filter - which entities should we ignore during constraint parsing
 function INFMAP.filter_constraint_parsing(ent)
-	if !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
 
 	return INFMAP.filter_general(ent)

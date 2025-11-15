@@ -37,12 +37,14 @@ local function load_folder(dir)
 	end
 end
 
+load_folder("infmap/")
+
 hook.Add("InitPostEntity", "infmap_init", function()
 	-- globals set inside of entities/infmap.lua
 	INFMAP.chunk_origin = GetGlobalVector("INFMAP_CHUNK_ORIGIN")
 	INFMAP.chunk_size = GetGlobalFloat("INFMAP_CHUNK_SIZE")
 
-	if INFMAP.chunk_size != 0 then
-		load_folder("infmap/")
-	end
+	--if INFMAP.chunk_size != 0 then
+	--	load_folder("infmap/")
+	--end
 end)

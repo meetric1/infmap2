@@ -5,7 +5,7 @@
 -- merges entity
 function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
 	if ent1_constrained == ent2_constrained then 
-		return 
+		return false
 	end
 
 	local ent2 = ent2_constrained.parent
@@ -23,6 +23,8 @@ function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
 			e:SetChunk(chunk_valid and chunk_offset or nil)
 		end
 	end
+
+	return true
 end
 
 -- welcome to my insanely fuckass algorithm
@@ -35,14 +37,9 @@ function INFMAP.validate_constraints(ent, prev)
 	end
 
 	if IsValid(prev) then
-		local prev_constrained = prev.INFMAP_CONSTRAINTS
-		local ent_constrained = ent.INFMAP_CONSTRAINTS
-		if prev_constrained == ent_constrained then
-			-- already checked
-			return 
+		if !INFMAP.merge_constraints(ent.INFMAP_CONSTRAINTS, prev.INFMAP_CONSTRAINTS) then
+			return
 		end
-
-		INFMAP.merge_constraints(ent_constrained, prev_constrained)
 	end
 
 	-- recurse
@@ -66,7 +63,7 @@ function INFMAP.invalidate_constraints(ent)
 		if !IsValid(e) or !isentity(e) then continue end
 
 		e.INFMAP_CONSTRAINTS = nil
-		e.INFMAP_DIRTY_CHECK = true
+		e.INFMAP_DIRTY_WRAP = true
 	end
 end
 
@@ -200,8 +197,9 @@ timer.Create("infmap_wrap_check", 0.1, 0, function()
 	for _, ent in ents.Iterator() do
 		update_cross_chunk_collision(ent)
 
-		if (!ent:GetVelocity():IsZero() or ent.INFMAP_DIRTY_CHECK) and !INFMAP.filter_teleport(ent) then 
+		if (!ent:GetVelocity():IsZero() or ent.INFMAP_DIRTY_WRAP) and !INFMAP.filter_teleport(ent) then 
 			table.insert(check_ents, ent)
+			ent.INFMAP_DIRTY_WRAP = nil
 		end
 	end
 end)
@@ -240,7 +238,7 @@ end)
 ---------------------
 -- ENTITY SPAWNING --
 ---------------------
-
+--[[
 hook.Add("PlayerSpawn", "infmap_respawn", function(ply, trans)
 	if ply:IsChunkValid() and !trans then
 		ply:SetChunk(INFMAP.Vector())
@@ -252,7 +250,7 @@ hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
 	if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
 		ent:SetChunk(vector_origin)
 	end
-end)
+end)]]
 
 
 -------------
