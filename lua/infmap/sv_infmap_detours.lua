@@ -95,7 +95,7 @@ detour(ENTITY, "Spawn", function(self)
 	-- STOP!!! we're about to create a constraint with 2 entities, we need to localize all the data
 	local ent1, ent2 = self.INFMAP_PHYS_CONSTRAINT_OBJECTS[1], self.INFMAP_PHYS_CONSTRAINT_OBJECTS[2]
 
-	-- Step 1: Localize constraint data
+	-- Localize constraint data
 	local chunk_offset = self:GetChunk() - ent1:GetChunk()
 	local keys = self:GetKeyValues()
 	self:INFMAP_SetPos(INFMAP.unlocalize(self:INFMAP_GetPos(), chunk_offset))
@@ -107,12 +107,12 @@ detour(ENTITY, "Spawn", function(self)
 		end
 	end
 
-	-- Step 2: localize prop locations
+	-- localize prop locations
 	INFMAP.validate_constraints(ent1)
 	INFMAP.validate_constraints(ent2)
 	INFMAP.merge_constraints(ent2.INFMAP_CONSTRAINTS, ent1.INFMAP_CONSTRAINTS)
 
-	-- Step 3: Spawn
+	-- Spawn
 	self:INFMAP_Spawn()
 end, true)
 
@@ -153,7 +153,7 @@ end)
 ---------------------
 -- pickups (health/ammo/objects)
 local function player_should_pickup(ply, ent)
-	if ply:IsChunkValid() and ent:IsChunkValid() and ply:GetChunk() != ent:GetChunk() then
+	if ply.INFMAP_CHUNK != ent.INFMAP_CHUNK then
 		return false
 	end
 end
@@ -167,7 +167,7 @@ hook.Add("EntityTakeDamage", "infmap_damage_detour", function(ply, dmg)
 	if !dmg:IsExplosionDamage() and !dmg:IsDamageType(DMG_BURN) then return end
 
 	local ent = dmg:GetInflictor()
-	if ply:IsChunkValid() and ent:IsChunkValid() and ply:GetChunk() != ent:GetChunk() then
+	if ply.INFMAP_CHUNK != ent.INFMAP_CHUNK then
 		return true
 	end
 end)

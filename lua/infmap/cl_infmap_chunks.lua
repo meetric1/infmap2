@@ -3,8 +3,11 @@ local ENTITY = FindMetaTable("Entity")
 -- you should never call this manually
 -- TODO: physgun glow probably shows up in other chunks
 function ENTITY:SetChunk(chunk)
+	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
+	if !err and prevent then return end
+
 	self.INFMAP_CHUNK = chunk
-	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride)
+	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride) -- self.RenderOverride = self.INFMAP_RenderOverride
 
 	local lp = LocalPlayer()
 	local offset = self:GetChunk() - lp:GetChunk()
@@ -71,7 +74,7 @@ end
 local function network_var_changed(ent, name, old, new, recurse)
 	if name != "INFMAP_CHUNK" then return end
 
-	-- !!!HACK!!! "IT CHANGES CLASS MID-FUCKING EXECUTION??"
+	-- "IT CHANGES CLASS MID-FUCKING EXECUTION??"
 	if !ent:GetModel() and recurse != true then
 		timer.Simple(0, function()
 			network_var_changed(ent, name, old, new, true)
@@ -118,13 +121,12 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 end)
 
 
--- debug
+-----------
+-- DEBUG --
+-----------
+-- (abhorrent code.. remove when we don't need it anymore)
 local debug_enabled = CreateClientConVar("infmap_debug", "0", true, false)
 local maxsize = Vector(1, 1, 1) * 2^14
-local white = Color(255, 255, 255, 0)
-local red = Color(255, 0, 0, 255)
-local blue = Color(0, 0, 255, 255)
-local green = Color(0, 255, 0, 255)
 
 hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	if !debug_enabled:GetBool() then return end
@@ -132,11 +134,11 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	local cs = Vector(1, 1, 1) * INFMAP.chunk_size
 	local co = INFMAP.unlocalize(vector_origin, LocalPlayer():GetChunk())--chunk_offset * INFMAP.chunk_size * 2
 	
-	render.DrawWireframeSphere(Vector(), 10, 10, 10, red, true)
-	render.DrawWireframeBox(INFMAP.chunk_origin, Angle(), -cs, cs, white, true)
+	render.DrawWireframeSphere(Vector(), 10, 10, 10, Color(255, 0, 0, 255), true)
+	render.DrawWireframeBox(INFMAP.chunk_origin, Angle(), -cs, cs, Color(255, 255, 255, 0), true)
 	
 	--render.DrawWireframeBox(Vector(), Angle(), -cs - co, cs - co, black, true)
-	render.DrawWireframeBox(Vector(), Angle(), -maxsize - co, maxsize - co, blue, true)
+	render.DrawWireframeBox(Vector(), Angle(), -maxsize - co, maxsize - co, Color(0, 0, 255, 255), true)
 
 	--print(INFMAP.unlocalize(INFMAP.localize(EyePos())))
 

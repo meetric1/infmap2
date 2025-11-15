@@ -14,6 +14,7 @@ local function update_entity(ent, offset, chunk)
 	end
 end
 
+-- TODO: cache this
 local function get_offset(ent)
 	return ent:INFMAP_GetPos() - ent:GetVBSPPos() + ent:OBBCenter()
 end
@@ -41,7 +42,6 @@ function ENT:EndTouch(ent)
 
 	INFMAP.validate_constraints(ent)
 	ent = ent.INFMAP_CONSTRAINTS.parent
-
 	if INFMAP.filter_teleport(ent, true) then return end
 
 	update_entity(ent, -get_offset(self), self:GetChunk())
@@ -70,7 +70,7 @@ function ENT:Think()
 		INFMAP.unlocalize(vector_origin, self:GetChunk() - Entity(1):GetChunk()), 
 		mins, 
 		maxs, 
-		0.25, 
+		0.1, 
 		Color(0, 255, 0, 0)
 	)
 
@@ -78,7 +78,7 @@ function ENT:Think()
 		INFMAP.unlocalize(vector_origin, -Entity(1):GetChunk()), 
 		self:OBBMins(), 
 		self:OBBMaxs(), 
-		0.25, 
+		0.1, 
 		Color(255, 0, 0, 0)
 	)
 

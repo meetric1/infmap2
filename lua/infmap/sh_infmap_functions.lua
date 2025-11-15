@@ -94,22 +94,25 @@ function INFMAP.unfucked_setpos(ent, pos)
 end
 
 -- Is this position in a chunk?
-local pos_local = Vector() -- avoid creating vector object (yes, they are that expensive..)
 function INFMAP.in_chunk(pos, size)
 	local chunk_size = size or INFMAP.chunk_size
-	pos_local:Set(pos)
-	pos_local:Sub(INFMAP.chunk_origin)
+	local chunk_origin = INFMAP.chunk_origin
+	local x = pos[1] - chunk_origin[1]
+	local y = pos[2] - chunk_origin[2]
+	local z = pos[3] - chunk_origin[3]
 
 	return (
-		pos_local[1] > -chunk_size and pos_local[1] < chunk_size and 
-		pos_local[2] > -chunk_size and pos_local[2] < chunk_size and 
-		pos_local[3] > -chunk_size and pos_local[3] < chunk_size
+		x > -chunk_size and x < chunk_size and 
+		y > -chunk_size and y < chunk_size and 
+		z > -chunk_size and z < chunk_size
 	)
 end
 
 function INFMAP.localize(pos, size)
-	pos_local:Set(pos)
-	pos_local:Sub(INFMAP.chunk_origin) -- pos_local = pos - INFMAP.chunk_origin (fast)
+	local chunk_origin = INFMAP.chunk_origin
+	local x = pos[1] - chunk_origin[1]
+	local y = pos[2] - chunk_origin[2]
+	local z = pos[3] - chunk_origin[3]
 
 	local chunk_size = size or INFMAP.chunk_size
 	local chunk_size2 = chunk_size * 2
@@ -117,19 +120,19 @@ function INFMAP.localize(pos, size)
 	
 	-- calculate chunk offset
 	local chunk_offset = INFMAP.Vector(
-		math.floor((pos_local[1] + chunk_size) * chunk_size2_inv), 
-		math.floor((pos_local[2] + chunk_size) * chunk_size2_inv), 
-		math.floor((pos_local[3] + chunk_size) * chunk_size2_inv)
+		math.floor((x + chunk_size) * chunk_size2_inv), 
+		math.floor((y + chunk_size) * chunk_size2_inv), 
+		math.floor((z + chunk_size) * chunk_size2_inv)
 	)
 
 	-- calculate localized position
-	local offset = Vector(pos_local)
-	
 	-- wrap coords, we offset vector so coords are 0 to x * 2 instead of -x to x during modulo
-	offset[1] = ((offset[1] + chunk_size) % chunk_size2) - chunk_size
-	offset[2] = ((offset[2] + chunk_size) % chunk_size2) - chunk_size
-	offset[3] = ((offset[3] + chunk_size) % chunk_size2) - chunk_size
-	offset:Add(INFMAP.chunk_origin)
+	local offset = Vector(
+		((x + chunk_size) % chunk_size2) - chunk_size,
+		((y + chunk_size) % chunk_size2) - chunk_size,
+		((z + chunk_size) % chunk_size2) - chunk_size
+	)
+	offset:Add(chunk_origin)
 
 	return offset, chunk_offset
 end
@@ -146,10 +149,11 @@ end
 
 -- replace with util.IsBoxIntersectingBox if desired
 function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
-	return
+	return (
 		max_b[1] >= min_a[1] and min_b[1] <= max_a[1] and 
 		max_b[2] >= min_a[2] and min_b[2] <= max_a[2] and 
 		max_b[3] >= min_a[3] and min_b[3] <= max_a[3]
+	)
 end
 
 -- we need more filters, as there are a *lot* of weird exceptions. we need:
@@ -273,7 +277,7 @@ end
 -- algorithm to split concave (and convex) shapes given a set of triangles
 -- tris are in the format {{pos = value}, {pos = value2}}
 -- code based on Glass: Rewrite
-/*
+--[[[
 function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	if !tris then return {} end
 
@@ -395,15 +399,14 @@ function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	end
 	
 	-- uncomment for convex shapes
-	--[[
 	-- add triangles inside of the object
 	-- each 2 points is an edge, create a triangle between the egde and first point
 	-- start at index 4 since the first edge (1-2) cant exist since we are wrapping around the first point
-	for i = 4, #plane_points, 2 do
-		table_insert(split_tris, plane_points[1    ])
-		table_insert(split_tris, plane_points[i - 1])
-		table_insert(split_tris, plane_points[i    ])
-	end]]
+	--for i = 4, #plane_points, 2 do
+	--	table_insert(split_tris, plane_points[1    ])
+	--	table_insert(split_tris, plane_points[i - 1])
+	--	table_insert(split_tris, plane_points[i    ])
+	--end
 
 	return split_tris
-end*/
+end]]

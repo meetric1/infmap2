@@ -172,7 +172,7 @@ end
 -- ENTITY WRAPPING --
 ---------------------
 
-local function update_entity(ent, chunk_offset)
+local function update_entity(ent, chunk)
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 
@@ -182,14 +182,15 @@ local function update_entity(ent, chunk_offset)
 		end
 
 		-- wrap
-		local chunk = e:GetChunk() - chunk_offset
-		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk)
-		e:SetChunk(chunk_offset)
+		local chunk_offset = e:GetChunk() - chunk
+		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset)
+		e:SetChunk(chunk)
 		INFMAP.unfucked_setpos(e, pos)
 	end
 end
 
 -- which entities should be checked per frame (optimization filter)
+-- TODO: should we refactor this?
 local check_ents = {}
 timer.Create("infmap_wrap_check", 0.1, 0, function()
 	check_ents = {}
@@ -214,14 +215,14 @@ hook.Add("Think", "infmap_wrap", function()
 		if INFMAP.filter_teleport(ent) then continue end -- required check just incase the constraint table updated
 
 		-- time to teleport
-		local _, chunk_offset = INFMAP.localize(ent:INFMAP_GetPos())
-		chunk_offset = chunk_offset + ent:GetChunk()
+		local _, chunk = INFMAP.localize(ent:INFMAP_GetPos())
+		chunk = chunk + ent:GetChunk()
 
 		-- hook support (slow..)
-		local err, prevent = pcall(function() hook.Run("OnChunkWrap", ent, chunk_offset) end)
+		local err, prevent = pcall(function() hook.Run("OnChunkWrap", ent, chunk) end)
 		if !err and prevent then continue end
 
-		update_entity(ent, chunk_offset)
+		update_entity(ent, chunk)
 
 		-- if we're holding something, force it into our chunk
 		if ent:IsPlayer() then 
@@ -229,7 +230,7 @@ hook.Add("Think", "infmap_wrap", function()
 			if IsValid(holding) then
 				INFMAP.validate_constraints(holding)
 				holding.INFMAP_CONSTRAINTS.parent = holding
-				update_entity(holding, chunk_offset)
+				update_entity(holding, chunk)
 			end
 		end
 	end
