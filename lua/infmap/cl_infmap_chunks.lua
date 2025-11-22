@@ -3,7 +3,7 @@ local ENTITY = FindMetaTable("Entity")
 -- you should never call this manually
 -- TODO: physgun glow probably shows up in other chunks
 function ENTITY:SetChunk(chunk)
-	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
+	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
 	if !err and prevent then return end
 
 	self.INFMAP_CHUNK = chunk
@@ -28,7 +28,7 @@ function ENTITY:SetChunk(chunk)
 
 		if INFMAP.filter_render_fancy(self) then
 			local render_func = self.INFMAP_RenderOverride or self.DrawModel
-			self:INFMAP___newindex("RenderOverride", function(self, flags)
+			self:INFMAP___newindex("RenderOverride", function(self, flags) -- self.RenderOverride = function
 				cam.Start3D(EyePos() - self.INFMAP_RENDER_OFFSET)
 					render_func(self, flags)
 				cam.End3D()
@@ -53,6 +53,7 @@ function ENTITY:SetChunk(chunk)
 				
 				self:EnableMatrix("RenderMultiply", offset_ang)
 			end
+
 			self:CalcAbsolutePosition(self:INFMAP_GetPos(), self:GetAngles())
 			self:SetLOD(0)
 		end
@@ -64,7 +65,7 @@ function ENTITY:SetChunk(chunk)
 	lp:SetCustomCollisionCheck(chunk and true or false)
 
 	for _, ent in ents.Iterator() do
-		if ent == lp then continue end	-- gulp
+		if ent == lp or INFMAP.filter_render(ent) then continue end
 
 		-- force update
 		ent:SetChunk(ent.INFMAP_CHUNK)
@@ -75,7 +76,7 @@ local function network_var_changed(ent, name, old, new, recurse)
 	if name != "INFMAP_CHUNK" then return end
 
 	-- "IT CHANGES CLASS MID-FUCKING EXECUTION??"
-	if !ent:GetModel() and recurse != true then
+	if !ent:GetModel() and !recurse then
 		timer.Simple(0, function()
 			network_var_changed(ent, name, old, new, true)
 		end)
@@ -85,7 +86,6 @@ local function network_var_changed(ent, name, old, new, recurse)
 
 	ent:SetChunk(INFMAP.decode_vector(new))
 end
-
 hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
 
 -- when bounding box is outside of world bounds the object isn't rendered

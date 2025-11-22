@@ -274,6 +274,20 @@ function INFMAP.filter_constraint(ent)
 	return false
 end
 
+-- safe hook call, for easy API implementation
+-- will throw error, but does not halt infmap codebase
+function INFMAP.hook_run_safe(hook_name, a, b, c, d)
+	local err, ret = pcall(function() hook.Run(hook_name, a, b, c, d) end)
+	err = !err
+
+	if err then
+		ErrorNoHalt(prevent)
+	end
+
+	return err, ret
+end
+-- INFMAP.hook_run_safe = hook.Run
+
 -- algorithm to split concave (and convex) shapes given a set of triangles
 -- tris are in the format {{pos = value}, {pos = value2}}
 -- code based on Glass: Rewrite

@@ -219,7 +219,7 @@ hook.Add("Think", "infmap_wrap", function()
 		chunk = chunk + ent:GetChunk()
 
 		-- hook support (slow..)
-		local err, prevent = pcall(function() hook.Run("OnChunkWrap", ent, chunk) end)
+		local err, prevent = INFMAP.hook_run_safe("OnChunkWrap", ent, chunk)
 		if !err and prevent then continue end
 
 		update_entity(ent, chunk)
@@ -260,7 +260,7 @@ end)]]
 local ENTITY = FindMetaTable("Entity")
 
 function ENTITY:SetChunk(chunk)
-	local err, prevent = pcall(function() hook.Run("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK) end)
+	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
 	if !err and prevent then return end
 	
 	if chunk != nil then
