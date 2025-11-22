@@ -151,4 +151,25 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 			debugoverlay.Triangle(vertices[1], vertices[i - 1], vertices[i], 0, Color(255 * color, 0, 0, 100))
 		end
 	end]]
+
+	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp_client")) do
+		local size = vbsp:GetVBSPSize() / 2
+		render.DrawWireframeBox(
+			vbsp:GetPos(), 
+			Angle(), 
+			-size, 
+			size, 
+			Color(0, 255, 0),
+			true
+		)
+		render.DrawWireframeBox(
+			vbsp:GetVBSPPos(), 
+			Angle(), 
+			-size, 
+			size, 
+			Color(255, 0, 0),
+			true
+		)
+	end
+	
 end)

@@ -6,11 +6,10 @@ ENT.PrintName = "infmap"
 
 function ENT:Initialize()
     self:SetTrigger(true)
-	
-	local origin = self:GetPos()
-	local size = self:OBBMaxs()[1]
-	SetGlobalVector("INFMAP_CHUNK_ORIGIN", origin)
-	SetGlobalFloat("INFMAP_CHUNK_SIZE", size)
+
+	SetGlobalVector("INFMAP_CHUNK_ORIGIN", self:GetPos())
+	SetGlobalFloat("INFMAP_CHUNK_SIZE", self:OBBMaxs()[1])
+	INFMAP.init()
 end
 
 function ENT:StartTouch(ent)
@@ -22,5 +21,5 @@ function ENT:EndTouch(ent)
 end
 
 function ENT:KeyValue(key, value)
-	
+
 end

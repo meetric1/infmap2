@@ -223,6 +223,7 @@ INFMAP.teleport_class_filter = {
 -- teleport filter - which objects shouldnt be wrapped?
 function INFMAP.filter_teleport(ent, ignore_chunk_valid)
 	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
+
 	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
 	if ent.INFMAP_CONSTRAINTS and (ent.INFMAP_CONSTRAINTS.parent != ent) then return true end
@@ -232,10 +233,11 @@ function INFMAP.filter_teleport(ent, ignore_chunk_valid)
 end
 
 -- collision filter - which entities shouldnt have cross-chunk collision?
-function INFMAP.filter_collision(ent)
+function INFMAP.filter_collision(ent, ignore_chunk_valid)
+	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
+
 	if ent:IsPlayer() then return true end -- too bitchy
 	if !ent:GetModel() then return true end
-	if !ent:IsChunkValid() then return true end
 	if IsValid(ent:GetParent()) then return true end
 	if ent:BoundingRadius() < 10 then return true end -- no tiny props, too much compute
 	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
@@ -244,9 +246,10 @@ function INFMAP.filter_collision(ent)
 end
 
 -- renderer filter - which entities shouldnt be rendered?
-function INFMAP.filter_render(ent)
+function INFMAP.filter_render(ent, ignore_chunk_valid)
+	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
+	
 	if ent:GetNoDraw() then return true end
-	if !ent:IsChunkValid() then return true end
 
 	return INFMAP.filter_general(ent)
 end
@@ -277,11 +280,11 @@ end
 -- safe hook call, for easy API implementation
 -- will throw error, but does not halt infmap codebase
 function INFMAP.hook_run_safe(hook_name, a, b, c, d)
-	local err, ret = pcall(function() hook.Run(hook_name, a, b, c, d) end)
-	err = !err
+	local succ, ret = pcall(function() hook.Run(hook_name, a, b, c, d) end)
+	local err = !succ
 
 	if err then
-		ErrorNoHalt(prevent)
+		ErrorNoHaltWithStack(ret)
 	end
 
 	return err, ret
