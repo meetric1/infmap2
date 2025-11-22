@@ -169,6 +169,7 @@ INFMAP.class_filter = INFMAP.class_filter or {
 	["infmap"] = true,
 	["infmap_clone"] = true,
 	["infmap_vbsp"] = true,
+	["infmap_vbsp_client"] = true,
 	["physgun_beam"] = true,
 	["worldspawn"] = true,
 	["info_particle_system"] = true,
@@ -279,8 +280,8 @@ end
 
 -- safe hook call, for easy API implementation
 -- will throw error, but does not halt infmap codebase
-function INFMAP.hook_run_safe(hook_name, a, b, c, d)
-	local succ, ret = pcall(function() hook.Run(hook_name, a, b, c, d) end)
+function INFMAP.hook_run_safe(hook_name, ...)
+	local succ, ret = pcall(function(...) hook.Run(hook_name, ...) end, ...)
 	local err = !succ
 
 	if err then
