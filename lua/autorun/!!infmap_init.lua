@@ -1,5 +1,9 @@
 AddCSLuaFile()
 
+-- ~15 ms check
+local should_init = string.find(file.Read("maps/" .. game.GetMap() .. ".bsp", "GAME"), "\"classname\" \"infmap\"")
+if !should_init then return end
+
 INFMAP = INFMAP or {
 	chunk_origin = Vector(1500, 0, 0),
 	chunk_size = 1000
@@ -11,13 +15,6 @@ INFMAP = INFMAP or {
 -- Load the files
 local function load_folder(dir)
 	local files, dirs = file.Find(dir .. "*","LUA")
-
-	-- reoccur in directory
-	if dirs then
-		for _, d in ipairs(dirs) do
-			load_folder(dir .. d .. "/")
-		end
-	end
 
 	-- load files
 	if files then
@@ -35,16 +32,19 @@ local function load_folder(dir)
 			end
 		end
 	end
+
+	-- reoccur in directory
+	if dirs then
+		for _, d in ipairs(dirs) do
+			load_folder(dir .. d .. "/")
+		end
+	end
 end
 
 load_folder("infmap/")
 
+-- globals set inside of entities/infmap.lua
 hook.Add("InitPostEntity", "infmap_init", function()
-	-- globals set inside of entities/infmap.lua
 	INFMAP.chunk_origin = GetGlobalVector("INFMAP_CHUNK_ORIGIN")
 	INFMAP.chunk_size = GetGlobalFloat("INFMAP_CHUNK_SIZE")
-
-	--if INFMAP.chunk_size != 0 then
-	--	load_folder("infmap/")
-	--end
 end)

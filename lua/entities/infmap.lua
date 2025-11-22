@@ -1,15 +1,15 @@
 AddCSLuaFile()
 
 ENT.Type = "brush"
-ENT.Base = "base_brush"
+--ENT.Base = "base_brush"
 ENT.PrintName = "infmap"
 
 function ENT:Initialize()
     self:SetTrigger(true)
 	
-	local pos = self:GetPos()
+	local origin = self:GetPos()
 	local size = self:OBBMaxs()[1]
-	SetGlobalVector("INFMAP_CHUNK_ORIGIN", pos)
+	SetGlobalVector("INFMAP_CHUNK_ORIGIN", origin)
 	SetGlobalFloat("INFMAP_CHUNK_SIZE", size)
 end
 
