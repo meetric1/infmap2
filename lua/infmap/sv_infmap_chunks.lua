@@ -211,7 +211,7 @@ function ENTITY:SetChunk(chunk)
 
 	-- parent support (recursive)
 	for _, ent in ipairs(self:GetChildren()) do
-		if INFMAP.filter_general(ent) or ent.INFMAP_CHUNK == chunk then continue end
+		if INFMAP.filter_general(ent) or ent:InChunk(chunk) then continue end
 		
 		ent:SetChunk(chunk)
 	end

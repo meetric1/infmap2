@@ -10,6 +10,14 @@ function ENTITY:IsChunkValid()
 	return self.INFMAP_CHUNK != nil
 end
 
+function ENTITY:InChunk(a)
+	if isentity(a) then
+		return self.INFMAP_CHUNK == a.INFMAP_CHUNK
+	else
+		return self.INFMAP_CHUNK == a
+	end
+end
+
 -------------
 -- PHYSOBJ --
 -------------

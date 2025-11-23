@@ -103,7 +103,7 @@ end)
 ---------------------
 -- disable client traces shot from other chunks
 hook.Add("EntityFireBullets", "infmap_bullet_detour", function(ent, data)
-	if LocalPlayer().INFMAP_CHUNK != ent.INFMAP_CHUNK then
+	if LocalPlayer():InChunk(ent) then
 		data.Tracer = 0
 		return true
 	end
