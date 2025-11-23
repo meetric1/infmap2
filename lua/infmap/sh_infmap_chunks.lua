@@ -1,3 +1,6 @@
+------------
+-- ENTITY --
+------------
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:GetChunk()
 	return INFMAP.Vector(self.INFMAP_CHUNK)
@@ -7,7 +10,9 @@ function ENTITY:IsChunkValid()
 	return self.INFMAP_CHUNK != nil
 end
 
-
+-------------
+-- PHYSOBJ --
+-------------
 local PHYSOBJ = FindMetaTable("PhysObj")
 function PHYSOBJ:IsChunkValid()
 	local ent = self:GetEntity()
