@@ -6,6 +6,11 @@ ENT.PrintName = "infmap_vbsp_client"
 function ENT:Initialize()
 	self:SetNotSolid(true)
 	--self:SetNoDraw(true)
+
+	if SERVER then return end
+
+	local size = self:GetVBSPSize() / 2
+	self:SetRenderBounds(-size, size)
 end
 
 function ENT:SetupDataTables()
@@ -17,7 +22,18 @@ function ENT:UpdateTransmitState()
 	return TRANSMIT_ALWAYS
 end
 
--- TODO: draw logic (waiting for vbsp models..)
+function ENT:Draw()
+	-- all entities in here SHOULD have invalid chunks
+	local size = self:GetVBSPSize() / 2
+	local force_draw = ents.FindInBox(self:GetVBSPPos() - size, self:GetVBSPPos() + size)
+	cam.Start3D(EyePos() + self:GetVBSPPos() - self:GetPos())
+	for _, ent in ipairs(force_draw) do
+		if INFMAP.filter_render(ent, true) then continue end
+		
+		ent:DrawModel()
+	end
+	cam.End3D()
+end
 
 --[[
 

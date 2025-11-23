@@ -162,14 +162,6 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 			Color(0, 255, 0),
 			true
 		)
-		render.DrawWireframeBox(
-			vbsp:GetVBSPPos(), 
-			Angle(), 
-			-size, 
-			size, 
-			Color(255, 0, 0),
-			true
-		)
 	end
 	
 end)

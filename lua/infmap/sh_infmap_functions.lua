@@ -169,7 +169,7 @@ INFMAP.class_filter = INFMAP.class_filter or {
 	["infmap"] = true,
 	["infmap_clone"] = true,
 	["infmap_vbsp"] = true,
-	["infmap_vbsp_client"] = true,
+	--["infmap_vbsp_client"] = true,
 	["physgun_beam"] = true,
 	["worldspawn"] = true,
 	["info_particle_system"] = true,
@@ -219,6 +219,7 @@ INFMAP.teleport_class_filter = {
 	["rpg_missile"] = true,
 	["crossbow_bolt"] = true,
 	["prop_vehicle_jeep"] = true, -- super fucked
+	["infmap_vbsp_client"] = true
 }
 
 -- teleport filter - which objects shouldnt be wrapped?

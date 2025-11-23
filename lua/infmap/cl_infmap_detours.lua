@@ -15,12 +15,11 @@ end
 
 -- mostly to shut the console up
 local math_Clamp = math.Clamp
-local source_bounds = 2^14 - 64
 local function clamp_vector(pos)
 	return Vector(
-		math_Clamp(pos[1], -source_bounds, source_bounds), 
-		math_Clamp(pos[2], -source_bounds, source_bounds), 
-		math_Clamp(pos[3], -source_bounds, source_bounds)
+		math_Clamp(pos[1], -2^14+64, 2^14-64), 
+		math_Clamp(pos[2], -2^14+64, 2^14-64), 
+		math_Clamp(pos[3], -2^14+64, 2^14-64)
 	)
 end
 

@@ -1,8 +1,9 @@
 AddCSLuaFile()
 
 -- ~15 ms check
-local should_init = string.find(file.Read("maps/" .. game.GetMap() .. ".bsp", "GAME"), "\"classname\" \"infmap\"")
-if !should_init then return end
+local str = file.Read("maps/" .. game.GetMap() .. ".bsp", "GAME")
+local ch = string.find(str, "\n\"classname\" \"infmap\"")
+if !ch then return end
 
 INFMAP = INFMAP or {
 	init = function()
