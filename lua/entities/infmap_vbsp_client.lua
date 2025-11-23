@@ -1,7 +1,12 @@
+-- VBSP - CLIENT
+-- handles rendering and visuals
+
 AddCSLuaFile()
 
 ENT.Type = "anim"
 ENT.PrintName = "infmap_vbsp_client"
+
+if !INFMAP then return end
 
 function ENT:Initialize()
 	self:SetNotSolid(true)

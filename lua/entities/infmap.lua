@@ -4,6 +4,8 @@ ENT.Type = "brush"
 --ENT.Base = "base_brush"
 ENT.PrintName = "infmap"
 
+if !INFMAP then return end
+
 function ENT:Initialize()
     self:SetTrigger(true)
 
