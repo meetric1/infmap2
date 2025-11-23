@@ -1,9 +1,10 @@
 -- VBSP - SERVER
--- handles teleportation and sets up clientside VBSP object
+-- handles teleportation and sets up clientside VBSP object, also controls PVS
 
 ENT.Type = "brush"
---ENT.Base = "anim"
 ENT.PrintName = "infmap_vbsp"
+
+if !INFMAP then return end
 
 local function update_entity(ent, offset, chunk)
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
@@ -92,22 +93,26 @@ hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
 end)
 
 hook.Add("SetupPlayerVisibility", "infmap_vbsp", function(ply, view_entity)
-	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp")) do
-		-- TODO: optimize (if far away.. don't bother. also, use existing defined MINS MAXS)
-		local pos = vbsp:INFMAP_GetPos()
-		local mins, maxs = vbsp:OBBMins() * 0.99, vbsp:OBBMaxs() * 0.99 -- TODO: come on xal... we need wiggle room
-		mins:Add(pos)
-		maxs:Add(pos)
-		
-		local eye_pos = INFMAP.unlocalize(ply:INFMAP_EyePos() + vbsp.INFMAP_VBSP_OFFSET, ply:GetChunk() - vbsp:GetChunk())
-		eye_pos[1] = math.Clamp(eye_pos[1], mins[1], maxs[1])
-		eye_pos[2] = math.Clamp(eye_pos[2], mins[2], maxs[2])
-		eye_pos[3] = math.Clamp(eye_pos[3], mins[3], maxs[3])
+	if !ply:IsChunkValid() then
+		AddOriginToPVS(INFMAP.chunk_origin)
+	else
+		for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp")) do
+			-- TODO: optimize (if far away.. don't bother. also, use existing defined MINS MAXS)
+			local pos = vbsp:INFMAP_GetPos()
+			local mins, maxs = vbsp:OBBMins() * 0.99, vbsp:OBBMaxs() * 0.99 -- TODO: come on xal... we need wiggle room
+			mins:Add(pos)
+			maxs:Add(pos)
+			
+			local eye_pos = INFMAP.unlocalize(ply:INFMAP_EyePos() + vbsp.INFMAP_VBSP_OFFSET, ply:GetChunk() - vbsp:GetChunk())
+			eye_pos[1] = math.Clamp(eye_pos[1], mins[1], maxs[1])
+			eye_pos[2] = math.Clamp(eye_pos[2], mins[2], maxs[2])
+			eye_pos[3] = math.Clamp(eye_pos[3], mins[3], maxs[3])
 
-		AddOriginToPVS(eye_pos)
+			AddOriginToPVS(eye_pos)
 
-		--eye_pos = eye_pos - vbsp.INFMAP_VBSP_OFFSET
-		--debugoverlay.Sphere(eye_pos, 10, 1, Color(255, 0, 255, 0), true)
-		--debugoverlay.Box(vector_origin, mins, maxs, 1, Color(255, 0, 255, 0))
+			--eye_pos = eye_pos - vbsp.INFMAP_VBSP_OFFSET
+			--debugoverlay.Sphere(eye_pos, 10, 1, Color(255, 0, 255, 0), true)
+			--debugoverlay.Box(vector_origin, mins, maxs, 1, Color(255, 0, 255, 0))
+		end
 	end
 end)

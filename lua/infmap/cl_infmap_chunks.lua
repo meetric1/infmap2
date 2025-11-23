@@ -1,7 +1,39 @@
-local ENTITY = FindMetaTable("Entity")
+-- when bounding box is outside of world bounds the object isn't rendered
+-- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
+local force_renderbounds = {}
+hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
+	for ent, _ in pairs(force_renderbounds) do
+		if !ent.INFMAP_RENDER_BOUNDS then continue end
+
+		-- calculate prop dir with minimal GC overhead
+		local dir = ent:INFMAP_GetPos()
+		dir:Add(ent.INFMAP_RENDER_OFFSET)
+		dir:Sub(eye_pos)
+		local shrink = 100 / dir:Length() -- TODO: non arbitrary distance
+		dir:Mul(shrink)
+
+		-- creates 2 vectors (fuck!)
+		local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
+		min:Mul(shrink)
+		max:Mul(shrink)
+
+		-- redo renderbounds
+		dir:Add(eye_pos)
+
+		--debugoverlay.Box(dir, min, max, 0, Color(0, 255, 0, 0))
+
+		min:Add(dir)
+		max:Add(dir)
+		ent:INFMAP_SetRenderBoundsWS(min, max)
+
+		--local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
+		--debugoverlay.Box(ent:INFMAP_GetPos(), min, max, 0, Color(255, 0, 255, 0))
+	end
+end)
 
 -- you should never call this manually
 -- TODO: physgun glow probably shows up in other chunks
+local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
 	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
 	if !err and prevent then return end
@@ -21,6 +53,8 @@ function ENTITY:SetChunk(chunk)
 
 		self:DisableMatrix("RenderMultiply")
 		self:SetLOD(-1)
+
+		force_renderbounds[self] = nil
 	else
 		-- visually offset entity
 		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, offset)
@@ -57,9 +91,11 @@ function ENTITY:SetChunk(chunk)
 			self:CalcAbsolutePosition(self:INFMAP_GetPos(), self:GetAngles())
 			self:SetLOD(0)
 		end
+
+		force_renderbounds[self] = true
 	end
 
-	-- our local client updated? Shit! We need to update everything else
+	-- if our local client updated we need to update everything else
 	if self != lp then return end
 
 	lp:SetCustomCollisionCheck(chunk and true or false)
@@ -87,38 +123,6 @@ local function network_var_changed(ent, name, old, new, recurse)
 	ent:SetChunk(INFMAP.decode_vector(new))
 end
 hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
-
--- when bounding box is outside of world bounds the object isn't rendered
--- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
-hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
-	for _, ent in ents.Iterator() do
-		if !ent.INFMAP_RENDER_BOUNDS then continue end
-
-		-- calculate prop dir with minimal GC overhead
-		local dir = ent:INFMAP_GetPos()
-		dir:Add(ent.INFMAP_RENDER_OFFSET)
-		dir:Sub(eye_pos)
-		local shrink = 100 / dir:Length() -- TODO: non arbitrary distance
-		dir:Mul(shrink)
-
-		-- creates 2 vectors (fuck!)
-		local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
-		min:Mul(shrink)
-		max:Mul(shrink)
-
-		-- redo renderbounds
-		dir:Add(eye_pos)
-
-		--debugoverlay.Box(dir, min, max, 0, Color(0, 255, 0, 0))
-
-		min:Add(dir)
-		max:Add(dir)
-		ent:INFMAP_SetRenderBoundsWS(min, max)
-
-		--local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
-		--debugoverlay.Box(ent:INFMAP_GetPos(), min, max, 0, Color(255, 0, 255, 0))
-	end
-end)
 
 
 -----------
