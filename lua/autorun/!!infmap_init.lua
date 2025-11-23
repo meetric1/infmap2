@@ -14,23 +14,31 @@ map:Seek(lump0_offset)
 local lump0_data = map:Read(lump0_length)
 map:Close()
 
-local should_init = string.find(lump0_data, "\n\"classname\" \"infmap\"")
-if !should_init then return end
+local infmap_start = string.find(lump0_data, [["classname" "infmap"]])
+if !infmap_start then return end
+
+local infmap_end = infmap_start
+while lump0_data[infmap_end] != "}" do
+	infmap_end = infmap_end + 1
+end
+
+while lump0_data[infmap_start] != "{" do
+	infmap_start = infmap_start - 1
+end
+
+local infmap_data = {}
+for k, v in string.sub(lump0_data, infmap_start, infmap_end):gmatch([["(.-)"%s+"(.-)"]]) do
+	infmap_data[k] = v
+end
 
 ------------
 -- INFMAP --
 ------------
 
--- TODO: initialization should NOT be entity based...
 INFMAP = INFMAP or {
-	init = function()
-		INFMAP.chunk_origin = GetGlobalVector("INFMAP_CHUNK_ORIGIN")
-		INFMAP.chunk_size = GetGlobalFloat("INFMAP_CHUNK_SIZE")
-	end
+	chunk_origin = Vector(infmap_data["origin"]),
+	chunk_size = (infmap_data["size"] or 10000) / 2
 }
-
--- globals set inside of entities/infmap.lua
-hook.Add("InitPostEntity", "infmap_init", INFMAP.init)
 
 -- Add required files for clients
 --resource.AddWorkshop("2905327911")
