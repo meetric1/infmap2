@@ -7,6 +7,10 @@ ENT.PrintName = "infmap_vbsp"
 if !INFMAP then return end
 
 local function update_entity(ent, offset, chunk)
+	if ent:IsPlayer() then 
+		ent:DropObject()
+	end
+
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 

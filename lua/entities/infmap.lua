@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 ENT.Type = "brush"
---ENT.Base = "base_brush"
 ENT.PrintName = "infmap"
 
 if !INFMAP then return end

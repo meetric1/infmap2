@@ -1,5 +1,9 @@
+---------------
+-- RENDERING --
+---------------
 -- when bounding box is outside of world bounds the object isn't rendered
 -- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
+-- TODO: this kinda sucks. should we do our own culling?
 local force_renderbounds = {}
 hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 	for ent, _ in pairs(force_renderbounds) do
@@ -31,7 +35,9 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 	end
 end)
 
--- you should never call this manually
+-------------
+-- GLOBALS --
+-------------
 -- TODO: physgun glow probably shows up in other chunks
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
@@ -42,24 +48,24 @@ function ENTITY:SetChunk(chunk)
 	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride) -- self.RenderOverride = self.INFMAP_RenderOverride
 
 	local lp = LocalPlayer()
-	local offset = self:GetChunk() - lp:GetChunk()
+	local offset = self:GetChunk() - lp:GetChunk() -- TODO: will need to change this for VBSP -> INFMAP visuals
 	if !lp:IsChunkValid() or offset:IsZero() or INFMAP.filter_render(self) then
-		self.CalcAbsolutePosition = nil
-
 		if self.INFMAP_RENDER_BOUNDS then
-			self:INFMAP_SetRenderBounds(unpack(self.INFMAP_RENDER_BOUNDS))
+			self:INFMAP_SetRenderBounds(self.INFMAP_RENDER_BOUNDS[1], self.INFMAP_RENDER_BOUNDS[2])
 			self.INFMAP_RENDER_BOUNDS = nil
 		end
 
+		self.CalcAbsolutePosition = nil
 		self:DisableMatrix("RenderMultiply")
 		self:SetLOD(-1)
 
 		force_renderbounds[self] = nil
 	else
 		-- visually offset entity
-		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, offset)
 		self.INFMAP_RENDER_BOUNDS = self.INFMAP_RENDER_BOUNDS or {self:INFMAP_GetRenderBounds()}
+		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, offset)
 
+		-- "RenderMultiply" does not work on some entities, so we need a full cam detour
 		if INFMAP.filter_render_fancy(self) then
 			local render_func = self.INFMAP_RenderOverride or self.DrawModel
 			self:INFMAP___newindex("RenderOverride", function(self, flags) -- self.RenderOverride = function
@@ -68,23 +74,20 @@ function ENTITY:SetChunk(chunk)
 				cam.End3D()
 			end)
 		else
-			-- raw position offset
-			local offset_pos = Matrix()
-			offset_pos:SetTranslation(self.INFMAP_RENDER_OFFSET)
-
 			-- we need to orient the matrix back, since it has already been rotated
 			-- (SELF * INV_ANG * TRANSLATE * ANG)
 			local offset_ang = Matrix()
-			
+			local offset_pos = Matrix()
+			offset_pos:SetTranslation(self.INFMAP_RENDER_OFFSET)
+
 			-- TODO: do we need a CalcAbsolutePosition detour?
 			self.CalcAbsolutePosition = function(self, pos, ang)
 				offset_pos:SetAngles(ang)
-
 				offset_ang:Identity()
 				offset_ang:SetAngles(ang)
 				offset_ang:Invert()
 				offset_ang:Mul(offset_pos)
-				
+
 				self:EnableMatrix("RenderMultiply", offset_ang)
 			end
 
@@ -102,12 +105,13 @@ function ENTITY:SetChunk(chunk)
 
 	for _, ent in ents.Iterator() do
 		if ent == lp or INFMAP.filter_render(ent) then continue end
-
-		-- force update
-		ent:SetChunk(ent.INFMAP_CHUNK)
+		ent:SetChunk(ent.INFMAP_CHUNK) -- force update
 	end
 end
 
+---------
+-- NET --
+---------
 local function network_var_changed(ent, name, old, new, recurse)
 	if name != "INFMAP_CHUNK" then return end
 

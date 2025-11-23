@@ -1,6 +1,6 @@
 AddCSLuaFile()
 
--- need to get entity data before map entities have initialized
+-- we need to get entity data before map entities have initialized
 -- otherwise, detours and related infmap functions will break
 -- ~1 ms check
 local map = file.Open("maps/" .. game.GetMap() .. ".bsp", "rb", "GAME")
@@ -10,12 +10,18 @@ local map_version = map:ReadLong()
 local lump0_offset = map:ReadLong()
 local lump0_length = map:ReadLong()
 map:Seek(lump0_offset)
+
 local lump0_data = map:Read(lump0_length)
 map:Close()
 
-local infmap = string.find(lump0_data, "\n\"classname\" \"infmap\"")
-if !infmap then return end
+local should_init = string.find(lump0_data, "\n\"classname\" \"infmap\"")
+if !should_init then return end
 
+------------
+-- INFMAP --
+------------
+
+-- TODO: initialization should NOT be entity based...
 INFMAP = INFMAP or {
 	init = function()
 		INFMAP.chunk_origin = GetGlobalVector("INFMAP_CHUNK_ORIGIN")
