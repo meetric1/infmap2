@@ -69,6 +69,8 @@ hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
 end)
 
 hook.Add("OnChunkUpdate", "infmap_vbsp_client", function(ent, chunk, prev_chunk)
+	if ent:GetClass() == "infmap_vbsp_client" then return end
+	
 	-- old
 	local vbsp = vbsps[INFMAP.encode_vector(prev_chunk)]
 	if IsValid(vbsp) and vbsp.INFMAP_VBSP_CHECK then

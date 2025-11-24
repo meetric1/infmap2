@@ -50,7 +50,6 @@ function ENT:Initialize()
 	self.INFMAP_VBSP_MINS = mins - self.INFMAP_VBSP_OFFSET
 	self.INFMAP_VBSP_CLIENT = client_vbsp
 
-	vbsps[#vbsps + 1] = self
 	vbsps[INFMAP.encode_vector(self:GetChunk())] = self
 end
 
@@ -62,7 +61,7 @@ end
 
 -- normal coordinates -> infmap coordinates
 function ENT:EndTouch(ent)
-	if ent:IsMarkedForDeletion() then return end
+	if ent:IsMarkedForDeletion() or ent:IsChunkValid() then return end
 
 	INFMAP.validate_constraints(ent)
 	ent = ent.INFMAP_CONSTRAINTS.parent
@@ -112,7 +111,7 @@ hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
 	
 	local check = {}
 	if chunk then
-		for _, vbsp in ipairs(vbsps) do
+		for _, vbsp in pairs(vbsps) do
 			if INFMAP.unlocalize(vector_origin, vbsp:GetChunk() - chunk):LengthSqr() <= vbsp.INFMAP_VBSP_FARZ then
 				check[#check + 1] = vbsp
 			end
