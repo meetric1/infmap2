@@ -48,7 +48,7 @@ function ENTITY:SetChunk(chunk)
 	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride) -- self.RenderOverride = self.INFMAP_RenderOverride
 
 	local lp = LocalPlayer()
-	local offset = self:GetChunk() - lp:GetChunk() -- TODO: will need to change this for VBSP -> INFMAP visuals
+	local offset = self:GetChunk() - lp:GetChunk()
 	if !lp:IsChunkValid() or offset:IsZero() or INFMAP.filter_render(self) then
 		if self.INFMAP_RENDER_BOUNDS then
 			self:INFMAP_SetRenderBounds(self.INFMAP_RENDER_BOUNDS[1], self.INFMAP_RENDER_BOUNDS[2])
@@ -168,6 +168,15 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 			-size, 
 			size, 
 			Color(0, 255, 0),
+			true
+		)
+
+		render.DrawWireframeBox(
+			vbsp:GetVBSPPos(), 
+			Angle(), 
+			-size, 
+			size, 
+			Color(255, 0, 0),
 			true
 		)
 	end

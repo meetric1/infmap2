@@ -2,7 +2,7 @@
 
 -- little endian encoding, in base 255 (since we can't represent 0x00 in a string)
 -- encoded using 7 bytes per number (since double can only represent integers to 2^53)
-	-- giving us a maximum positive and negative value of 255^6 * 127, which is just shy of 2^(7*8-1)
+	-- giving us a maximum positive and negative value of 255^6 * 127, which is just shy of 2^55
 function INFMAP.encode_vector(vec)
 	if vec == nil then return "" end
 	local str = ""

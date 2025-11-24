@@ -7,13 +7,10 @@ ENT.PrintName = "infmap_vbsp"
 if !INFMAP then return end
 
 local function update_entity(ent, offset, chunk)
-	if ent:IsPlayer() then 
-		ent:DropObject()
-	end
-
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 
+		if e:IsPlayer() then e:DropObject() end
 		e:ForcePlayerDrop()
 		e:SetChunk(chunk)
 		INFMAP.unfucked_setpos(e, e:INFMAP_GetPos() + offset)
@@ -25,9 +22,13 @@ function ENT:KeyValue(key, value)
 		self:SetChunk(INFMAP.Vector(value))
     elseif key == "position" then
 		self.INFMAP_VBSP_POS = Vector(value)
-    end
+	elseif key == "networkdist" then
+		local value = tonumber(value) or 2^15
+		self.INFMAP_VBSP_FARZ = value * value
+	end
 end
 
+local vbsps = {}
 function ENT:Initialize()
 	local center = self:OBBCenter()
 	local mins = self:OBBMins()
@@ -40,14 +41,23 @@ function ENT:Initialize()
 	client_vbsp:SetVBSPPos(pos_local)
 	client_vbsp:SetVBSPSize(maxs - mins)
 	client_vbsp:SetChunk(self:GetChunk())
+	client_vbsp:SetModel(self.INFMAP_VBSP_MODEL or "models/sstrp/mcculloch.mdl")
 	client_vbsp:Spawn()
 
+	self.INFMAP_VBSP_CHECK = {}
 	self.INFMAP_VBSP_OFFSET = pos_local - pos_world
 	self.INFMAP_VBSP_MAXS = maxs - self.INFMAP_VBSP_OFFSET
 	self.INFMAP_VBSP_MINS = mins - self.INFMAP_VBSP_OFFSET
-
 	self.INFMAP_VBSP_CLIENT = client_vbsp
-	self.INFMAP_VBSP_CHECK = {}
+
+	vbsps[#vbsps + 1] = self
+	vbsps[INFMAP.encode_vector(self:GetChunk())] = self
+end
+
+function ENT:StartTouch(ent)
+	if !ent:IsPlayer() then return end
+
+	ent:SetNWEntity("INFMAP_VBSP", self.INFMAP_VBSP_CLIENT)
 end
 
 -- normal coordinates -> infmap coordinates
@@ -67,14 +77,17 @@ function ENT:Think()
 	local maxs = self.INFMAP_VBSP_MAXS
 	
 	for ent, _ in pairs(self.INFMAP_VBSP_CHECK) do
-		local pos = ent:INFMAP_GetPos()
-		if !INFMAP.aabb_intersect_aabb(pos, pos, mins, maxs) then continue end
+		if !IsValid(ent) then
+			self.INFMAP_VBSP_CHECK[ent] = nil
+		else
+			local pos = ent:INFMAP_GetPos()
+			if !INFMAP.aabb_intersect_aabb(pos, pos, mins, maxs) then continue end
 
-		INFMAP.validate_constraints(ent)
-		if INFMAP.filter_teleport(ent) then continue end
+			INFMAP.validate_constraints(ent)
+			if INFMAP.filter_teleport(ent) then continue end
 
-		update_entity(ent, self.INFMAP_VBSP_OFFSET, nil)
-		self.INFMAP_VBSP_CHECK[ent] = false
+			update_entity(ent, self.INFMAP_VBSP_OFFSET, nil)
+		end
 	end
 
 	self:NextThink(CurTime())
@@ -82,35 +95,48 @@ function ENT:Think()
 end
 
 hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
-	-- TODO: optimize (use hash table)
-	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp")) do
-		if !vbsp.INFMAP_VBSP_CHECK then continue end
+	-- old
+	local vbsp = vbsps[INFMAP.encode_vector(prev_chunk)]
+	if IsValid(vbsp) and vbsp.INFMAP_VBSP_CHECK then
+		vbsp.INFMAP_VBSP_CHECK[ent] = nil
+	end
+	
+	-- new
+	vbsp = vbsps[INFMAP.encode_vector(chunk)]
+	if IsValid(vbsp) and vbsp.INFMAP_VBSP_CHECK then
+		vbsp.INFMAP_VBSP_CHECK[ent] = true
+	end
 
-		if prev_chunk == vbsp:GetChunk() then
-			vbsp.INFMAP_VBSP_CHECK[ent] = nil
-		end
-
-		if chunk == vbsp:GetChunk() then
-			vbsp.INFMAP_VBSP_CHECK[ent] = true
+	-- which vbsps should be added to this players PVS?
+	if !ent:IsPlayer() then return end
+	
+	local check = {}
+	if chunk then
+		for _, vbsp in ipairs(vbsps) do
+			if INFMAP.unlocalize(vector_origin, vbsp:GetChunk() - chunk):LengthSqr() <= vbsp.INFMAP_VBSP_FARZ then
+				check[#check + 1] = vbsp
+			end
 		end
 	end
+	ent.INFMAP_VBSP_CHECK = #check > 0 and check or nil
 end)
 
 hook.Add("SetupPlayerVisibility", "infmap_vbsp", function(ply, view_entity)
 	if !ply:IsChunkValid() then
+		-- VBSP -> INFMAP
 		AddOriginToPVS(INFMAP.chunk_origin)
 	else
-		for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp")) do
-			-- TODO: optimize (if far away.. don't bother. also, use existing defined MINS MAXS)
-			local pos = vbsp:INFMAP_GetPos()
-			local mins, maxs = vbsp:OBBMins() * 0.99, vbsp:OBBMaxs() * 0.99 -- TODO: come on xal... we need wiggle room
-			mins:Add(pos)
-			maxs:Add(pos)
-			
-			local eye_pos = INFMAP.unlocalize(ply:INFMAP_EyePos() + vbsp.INFMAP_VBSP_OFFSET, ply:GetChunk() - vbsp:GetChunk())
+		-- INFMAP -> VBSP
+		local check = ply.INFMAP_VBSP_CHECK
+		if !check then return end
+
+		for _, vbsp in ipairs(check) do
+			local mins, maxs = vbsp.INFMAP_VBSP_MINS, vbsp.INFMAP_VBSP_MAXS
+			local eye_pos = INFMAP.unlocalize(ply:INFMAP_EyePos(), ply:GetChunk() - vbsp:GetChunk())
 			eye_pos[1] = math.Clamp(eye_pos[1], mins[1], maxs[1])
 			eye_pos[2] = math.Clamp(eye_pos[2], mins[2], maxs[2])
 			eye_pos[3] = math.Clamp(eye_pos[3], mins[3], maxs[3])
+			eye_pos:Add(vbsp.INFMAP_VBSP_OFFSET)
 
 			AddOriginToPVS(eye_pos)
 

@@ -27,12 +27,12 @@ function ENT:UpdateTransmitState()
 	return TRANSMIT_ALWAYS
 end
 
+-- INFMAP -> VBSP
 function ENT:Draw()
 	-- all entities in here SHOULD have invalid chunks
 	local size = self:GetVBSPSize() / 2
 	local vbsp_pos = self:GetVBSPPos()
 	local force_draw = ents.FindInBox(vbsp_pos - size, vbsp_pos + size)
-	
 	cam.Start3D(EyePos() + vbsp_pos - self:GetPos())
 	for _, ent in ipairs(force_draw) do
 		if INFMAP.filter_render(ent, true) then continue end
@@ -40,21 +40,45 @@ function ENT:Draw()
 		ent:DrawModel()
 	end
 	cam.End3D()
+
+	self:DrawModel()
 end
 
---[[
+-- VBSP -> INFMAP
+hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
+	local lp = LocalPlayer()
+	if lp:IsChunkValid() then return end
+
+	local vbsp = lp:GetNWEntity("INFMAP_VBSP")
+	if !IsValid(vbsp) then return end
+	
+	local origin = INFMAP.chunk_origin
+	local size = INFMAP.chunk_size 
+	size = Vector(size, size, size)
+
+	local force_draw = ents.FindInBox(origin - size, origin + size)
+	cam.Start3D(EyePos() - vbsp:GetVBSPPos() + origin)
+	for _, ent in ipairs(force_draw) do
+		if INFMAP.filter_render(ent) or !ent:InChunk(vbsp) then continue end
+		
+		ent:DrawModel()
+	end
+	cam.End3D()
+end)
 
 -- renderview test (not working)
+--[[
 local drawing = false
-hook.Add("PreDrawEffects", "infmap_test", function()
+hook.Add("PostRender", "infmap_test", function()
 	--do return end
+	cam.Start3D()
 	render.SetColorMaterial()
 	render.DrawSphere(Vector(), 100, 10, 10)
-
+	cam.End3D()
 	if drawing then return end
 
 	drawing = true
-	RENDERVIEW_DRAWING = true
+	--RENDERVIEW_DRAWING = true
 	cam.Start2D()
 	--render.PushRenderTarget(render.GetMorphTex0())
 	--cam.PushModelMatrix(Matrix(), true)
@@ -64,6 +88,7 @@ hook.Add("PreDrawEffects", "infmap_test", function()
 		w = ScrW() / 4,
 		h = ScrH() / 4,
 		drawviewmodel = false,
+		viewid = 0
 	})
 	--cam.PopModelMatrix()
 	--render.PopRenderTarget()
@@ -71,5 +96,4 @@ hook.Add("PreDrawEffects", "infmap_test", function()
 	--RENDERVIEW_DRAWING = false
 	drawing = false
 end)
-
 ]]
