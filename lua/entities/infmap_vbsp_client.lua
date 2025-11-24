@@ -8,6 +8,7 @@ ENT.PrintName = "infmap_vbsp_client"
 
 if !INFMAP then return end
 
+local vbsps = {}
 function ENT:Initialize()
 	self:SetNotSolid(true)
 	--self:SetNoDraw(true)
@@ -16,6 +17,8 @@ function ENT:Initialize()
 
 	local size = self:GetVBSPSize() / 2
 	self:SetRenderBounds(-size, size)
+	self.INFMAP_VBSP_CHECK = {}
+	vbsps[INFMAP.encode_vector(self:GetChunk())] = self
 end
 
 function ENT:SetupDataTables()
@@ -56,15 +59,29 @@ hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
 	local size = INFMAP.chunk_size 
 	size = Vector(size, size, size)
 
-	local force_draw = ents.FindInBox(origin - size, origin + size)
 	cam.Start3D(EyePos() - vbsp:GetVBSPPos() + origin)
-	for _, ent in ipairs(force_draw) do
+	for ent, _ in pairs(vbsp.INFMAP_VBSP_CHECK) do
 		if INFMAP.filter_render(ent) or !ent:InChunk(vbsp) then continue end
 		
 		ent:DrawModel()
 	end
 	cam.End3D()
 end)
+
+hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
+	-- old
+	local vbsp = vbsps[INFMAP.encode_vector(prev_chunk)]
+	if IsValid(vbsp) and vbsp.INFMAP_VBSP_CHECK then
+		vbsp.INFMAP_VBSP_CHECK[ent] = nil
+	end
+	
+	-- new
+	vbsp = vbsps[INFMAP.encode_vector(chunk)]
+	if IsValid(vbsp) and vbsp.INFMAP_VBSP_CHECK then
+		vbsp.INFMAP_VBSP_CHECK[ent] = true
+	end
+end)
+
 
 -- renderview test (not working)
 --[[
