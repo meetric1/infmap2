@@ -136,7 +136,7 @@ timer.Create("infmap_wrap_check", 0.1, 0, function()
 			table.insert(check_ents, ent)
 		end
 
-		ent.INFMAP_DIRTY_WRAP = nil
+		ent.INFMAP_DIRTY_WRAP = nil -- TODO: REMOVE ME!! We should be directly shoving into check_ents
 	end
 end)
 

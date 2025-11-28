@@ -28,6 +28,7 @@ end
 function INFMAP.validate_constraints(ent, prev)
 	if INFMAP.filter_constraint_parsing(ent) then return end
 
+	-- TODO: optimize (don't need to initialize ent table if prev exists)
 	if !ent.INFMAP_CONSTRAINTS then
 		ent.INFMAP_CONSTRAINTS = {[ent] = true, ["parent"] = ent}
 	end

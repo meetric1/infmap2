@@ -1,9 +1,13 @@
 AddCSLuaFile()
 
-ENT.Type = "brush"
+ENT.Type = "point"
 ENT.PrintName = "infmap"
 
 if !INFMAP then return end
+
+function ENT:KeyValue(key, value)
+
+end
 
 function ENT:Initialize()
 
@@ -14,9 +18,5 @@ function ENT:StartTouch(ent)
 end
 
 function ENT:EndTouch(ent)
-
-end
-
-function ENT:KeyValue(key, value)
 
 end

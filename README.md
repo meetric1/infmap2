@@ -10,6 +10,7 @@ A "productionalized" full rewrite of InfMap, built for the SSTRP gamemode and ma
 - Easy to expand detouring with very minor overhead (+0.0001ms per call)
 - Entities to help hammer users implement infmap into their map.
 - Virtual BSP (VBSP) 'portals' to embed map geometry and seamlessly transition players in and out of the InfMap coordinate system
+- 64 bit chunks allowing travel up to ~450 light years in any direction
 
 ### Discarded features:
 - Example Base Map
