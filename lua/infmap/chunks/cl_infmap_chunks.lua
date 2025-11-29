@@ -135,12 +135,18 @@ hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
 -- (abhorrent code.. remove when we don't need it anymore)
 local debug_enabled = CreateClientConVar("infmap_debug", "0", true, false)
 local maxsize = Vector(1, 1, 1) * 2^14
+local function concat_vector(v)
+	if !v then return "nil" end
+
+	return string.format("%i %i %i", v[1], v[2], v[3])
+end
 
 hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	if !debug_enabled:GetBool() then return end
 
+	local lp = LocalPlayer()
 	local cs = Vector(1, 1, 1) * INFMAP.chunk_size
-	local co = INFMAP.unlocalize(vector_origin, LocalPlayer():GetChunk())--chunk_offset * INFMAP.chunk_size * 2
+	local co = INFMAP.unlocalize(vector_origin, lp:GetChunk())--chunk_offset * INFMAP.chunk_size * 2
 	
 	render.DrawWireframeSphere(Vector(), 10, 10, 10, Color(255, 0, 0, 255), true)
 	render.DrawWireframeBox(INFMAP.chunk_origin, Angle(), -cs, cs, Color(255, 255, 255, 0), true)
@@ -180,5 +186,10 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 			true
 		)
 	end
-	
+
+	cam.Start2D()
+		draw.DrawText("client chunk: " .. concat_vector(lp.INFMAP_CHUNK), "TargetID", nil, 130)
+		draw.DrawText("client pos: " .. concat_vector(lp:INFMAP_GetPos()), "TargetID", nil, 150)
+		draw.DrawText("server pos: " .. concat_vector(INFMAP.unlocalize(lp:INFMAP_GetPos(), lp:GetChunk())), "TargetID", nil, 170)
+	cam.End2D()
 end)
