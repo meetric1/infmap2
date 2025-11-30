@@ -178,20 +178,16 @@ end)
 ---------------------
 -- ENTITY SPAWNING --
 ---------------------
---[[
-hook.Add("PlayerSpawn", "infmap_respawn", function(ply, trans)
-	if ply:IsChunkValid() and !trans then
-		ply:SetChunk(INFMAP.Vector())
-	end
+hook.Add("PlayerSpawn", "infmap_respawn", function(ply)
+	ply:SetChunk(nil)
 end)
-
+--[[
 hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
 	-- TODO: proper prop spawn chunk handling
 	if !INFMAP.filter_general(ent) and !ent:IsChunkValid() then
 		ent:SetChunk(vector_origin)
 	end
 end)]]
-
 
 -------------
 -- GLOBALS --
