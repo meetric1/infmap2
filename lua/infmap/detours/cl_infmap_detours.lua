@@ -13,23 +13,13 @@ local function detour(metatable, func_name, detoured_func, force)
 	end
 end
 
--- mostly to shut the console up
-local math_Clamp = math.Clamp
-local function clamp_vector(pos)
-	return Vector(
-		math_Clamp(pos[1], -2^14+64, 2^14-64), 
-		math_Clamp(pos[2], -2^14+64, 2^14-64), 
-		math_Clamp(pos[3], -2^14+64, 2^14-64)
-	)
-end
-
 --------------------
 -- ENTITY DETOURS --
 --------------------
 local ENTITY = FindMetaTable("Entity")
 
 detour(ENTITY, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(clamp_vector(pos))
+	self:INFMAP_SetPos(INFMAP.clamp_pos(pos))
 end)
 
 detour(ENTITY, "GetPos", function(self)
@@ -95,7 +85,7 @@ end, true)
 local PHYSOBJ = FindMetaTable("PhysObj")
 
 detour(PHYSOBJ, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(clamp_vector(pos))
+	self:INFMAP_SetPos(INFMAP.clamp_pos(pos))
 end)
 
 ---------------------

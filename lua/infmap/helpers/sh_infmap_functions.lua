@@ -60,37 +60,22 @@ function INFMAP.decode_vector(str)
 	return vec
 end
 
--- setting position kills all velocity
-function INFMAP.unfucked_setpos(ent, pos)
-	-- clamp to source bounds
-	pos = Vector(
-		math.Clamp(pos[1], -2^14+64, 2^14-64),
-		math.Clamp(pos[2], -2^14+64, 2^14-64),
-		math.Clamp(pos[3], -2^14+64, 2^14-64)
+-- clamp to source bounds
+function INFMAP.clamp_pos(pos)
+	return Vector(
+		math.Clamp(pos[1], -2^14+1, 2^14-1),
+		math.Clamp(pos[2], -2^14+1, 2^14-1),
+		math.Clamp(pos[3], -2^14+1, 2^14-1)
 	)
+end
 
-	-- ragdoll moment
-	if ent:IsRagdoll() then
-		for i = 0, ent:GetPhysicsObjectCount() - 1 do
-			local phys = ent:GetPhysicsObjectNum(i)
-			local vel = phys:GetVelocity()
-			local diff = phys:INFMAP_GetPos() - ent:INFMAP_GetPos()
-		
-			phys:INFMAP_SetPos(pos + diff)
-			phys:SetVelocity(vel)
-		end
-
-		--ent:INFMAP_SetPos(pos)
-	else
-		local phys = ent:GetPhysicsObject()
-		if IsValid(phys) then 
-			local vel = phys:GetVelocity()
-			ent:INFMAP_SetPos(pos)
-			phys:SetVelocity(vel)
-		else
-			ent:INFMAP_SetPos(pos)
-		end
-	end
+-- Is the position within source bounds (or a specified bounds)?
+function INFMAP.in_bounds(pos)
+	return (
+		pos[1] > -2^14 and pos[1] < 2^14 and
+		pos[2] > -2^14 and pos[2] < 2^14 and
+		pos[3] > -2^14 and pos[3] < 2^14
+	)
 end
 
 -- Is this position in a chunk?

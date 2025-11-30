@@ -23,8 +23,6 @@ function ENT:Think()
 			self:INFMAP_SetPos(pos - vbsp.INFMAP_VBSP_OFFSET)
 			self:SetChunk(vbsp.INFMAP_VBSP_CHUNK)
 
-			print(self, self:INFMAP_GetPos(), self:GetChunk())
-
 			break
 		end
 	end

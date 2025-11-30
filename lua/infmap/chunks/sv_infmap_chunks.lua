@@ -45,6 +45,7 @@ hook.Add("OnPlayerPhysicsDrop", "infmap_pickup", player_drop)
 ---------------------------
 -- collision with props crossing through chunk bounderies
 local function update_cross_chunk_collision(ent, disable)
+	do return end
 	if INFMAP.filter_collision(ent) or INFMAP.in_chunk(ent:INFMAP_GetPos(), INFMAP.chunk_size - ent:BoundingRadius()) then
 		-- outside of area for cloning to happen (or invalidated), remove all clones
 		if ent.INFMAP_CLONES then
@@ -197,7 +198,10 @@ end)]]
 -------------
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
-	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
+	local prev_chunk = self.INFMAP_CHUNK
+	if chunk == prev_chunk then return end
+
+	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
 	if !err and prevent then return end
 	
 	if chunk != nil then

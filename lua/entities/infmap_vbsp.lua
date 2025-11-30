@@ -6,12 +6,14 @@ ENT.PrintName = "infmap_vbsp"
 
 if !INFMAP then return end
 
+-- TODO: better teleporting. ideally reuse chunk wrapping code
 local function update_entity(ent, offset, chunk)
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 
 		if e:IsPlayer() then e:DropObject() end
 		e:ForcePlayerDrop()
+
 		e:SetChunk(chunk)
 		INFMAP.unfucked_setpos(e, e:INFMAP_GetPos() + offset)
 	end
@@ -131,18 +133,19 @@ hook.Add("SetupPlayerVisibility", "infmap_vbsp", function(ply, view_entity)
 		local check = ply.INFMAP_VBSP_CHECK
 		if !check then return end
 
+		local eye_pos_local = ply:INFMAP_EyePos()
 		for _, vbsp in ipairs(check) do
-			local mins, maxs = vbsp.INFMAP_VBSP_MINS * 0.999, vbsp.INFMAP_VBSP_MAXS * 0.999
-			local eye_pos = INFMAP.unlocalize(ply:INFMAP_EyePos(), ply:GetChunk() - vbsp.INFMAP_VBSP_CHUNK)
-			eye_pos[1] = math.Clamp(eye_pos[1], mins[1], maxs[1])
-			eye_pos[2] = math.Clamp(eye_pos[2], mins[2], maxs[2])
-			eye_pos[3] = math.Clamp(eye_pos[3], mins[3], maxs[3])
-			eye_pos:Add(vbsp.INFMAP_VBSP_OFFSET)
+			local mins, maxs = vbsp.INFMAP_VBSP_MINS, vbsp.INFMAP_VBSP_MAXS
+			local eye_pos_world = INFMAP.unlocalize(eye_pos_local, ply:GetChunk() - vbsp.INFMAP_VBSP_CHUNK)
+			eye_pos_world[1] = math.Clamp(eye_pos_world[1], mins[1], maxs[1])
+			eye_pos_world[2] = math.Clamp(eye_pos_world[2], mins[2], maxs[2])
+			eye_pos_world[3] = math.Clamp(eye_pos_world[3], mins[3], maxs[3])
+			eye_pos_world:Add(vbsp.INFMAP_VBSP_OFFSET)
 
-			AddOriginToPVS(eye_pos)
+			AddOriginToPVS(eye_pos_world)
 
-			--eye_pos = eye_pos - vbsp.INFMAP_VBSP_OFFSET
-			--debugoverlay.Sphere(eye_pos, 10, 1, Color(255, 0, 255, 0), true)
+			--eye_pos_world = eye_pos_world - vbsp.INFMAP_VBSP_OFFSET
+			--debugoverlay.Sphere(eye_pos_world, 10, 1, Color(255, 0, 255, 0), true)
 			--debugoverlay.Box(vector_origin, mins, maxs, 1, Color(255, 0, 255, 0))
 		end
 	end
