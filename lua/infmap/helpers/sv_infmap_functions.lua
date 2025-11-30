@@ -1,3 +1,31 @@
+-- setting position kills all velocity
+function INFMAP.unfucked_setpos(ent, pos)
+	pos = INFMAP.clamp_pos(pos)
+
+	-- ragdoll moment
+	if ent:IsRagdoll() then
+		for i = 0, ent:GetPhysicsObjectCount() - 1 do
+			local phys = ent:GetPhysicsObjectNum(i)
+			local vel = phys:GetVelocity()
+			local diff = phys:INFMAP_GetPos() - ent:INFMAP_GetPos()
+		
+			phys:INFMAP_SetPos(pos + diff)
+			phys:SetVelocity(vel)
+		end
+
+		--ent:INFMAP_SetPos(pos)
+	else
+		local phys = ent:GetPhysicsObject()
+		if IsValid(phys) then 
+			local vel = phys:GetVelocity()
+			ent:INFMAP_SetPos(pos)
+			phys:SetVelocity(vel)
+		else
+			ent:INFMAP_SetPos(pos)
+		end
+	end
+end
+
 -- merges 2 contraptions into the same chunk (ent1 -> ent2)
 function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
 	if ent1_constrained == ent2_constrained then 
@@ -34,8 +62,15 @@ function INFMAP.validate_constraints(ent, prev)
 	end
 
 	if IsValid(prev) then
-		if !INFMAP.merge_constraints(ent.INFMAP_CONSTRAINTS, prev.INFMAP_CONSTRAINTS) then
-			return
+		local ent_constrained = ent.INFMAP_CONSTRAINTS
+		local prev_constrained = prev.INFMAP_CONSTRAINTS
+		if ent_constrained == prev_constrained then return end
+
+		for e, _ in pairs(ent_constrained) do
+			if !isentity(e) then continue end
+
+			prev_constrained[e] = true
+			e.INFMAP_CONSTRAINTS = prev_constrained
 		end
 	end
 

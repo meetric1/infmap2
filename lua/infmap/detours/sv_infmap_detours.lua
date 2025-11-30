@@ -23,10 +23,15 @@ detour(ENTITY, "GetPos", function(self)
 end)
 
 detour(ENTITY, "SetPos", function(self, pos)
-	local pos, chunk = INFMAP.localize(pos)
-	self:SetChunk(chunk)
-	self:INFMAP_SetPos(pos)
-end)
+	if INFMAP.in_bounds(pos) then
+		self:SetChunk(nil)
+		self:INFMAP_SetPos(pos)
+	else
+		local pos, chunk = INFMAP.localize(pos)
+		self:SetChunk(chunk)
+		self:INFMAP_SetPos(pos)
+	end
+end, true)
 
 detour(ENTITY, "WorldSpaceAABB", function(self)
 	local mins, maxs = self:INFMAP_WorldSpaceAABB()
@@ -53,6 +58,12 @@ detour(ENTITY, "NearestPoint", function(self, pos)
 	local pos, chunk = INFMAP.localize(pos)
 	return INFMAP.unlocalize(self:INFMAP_NearestPoint(pos), chunk)
 end)
+
+---------------------
+-- VEHICLE DETOURS --
+---------------------
+local VEHICLE = FindMetaTable("Vehicle")
+detour(VEHICLE, "SetPos", ENTITY.SetPos, true)
 
 ------------------------
 -- CONSTRAINT DETOURS --
@@ -94,24 +105,27 @@ detour(ENTITY, "Spawn", function(self)
 
 	-- STOP!!! we're about to create a constraint with 2 entities, we need to localize all the data
 	local ent1, ent2 = self.INFMAP_PHYS_CONSTRAINT_OBJECTS[1], self.INFMAP_PHYS_CONSTRAINT_OBJECTS[2]
-
-	-- Localize constraint data
-	local chunk_offset = self:GetChunk() - ent1:GetChunk()
-	local keys = self:GetKeyValues()
-	self:INFMAP_SetPos(INFMAP.unlocalize(self:INFMAP_GetPos(), chunk_offset))
-	for _, str in ipairs(constraint_localize) do
-		local pos = keys[str]
-		if pos then
-			self:SetKeyValue(str, tostring(INFMAP.unlocalize(Vector(pos), chunk_offset)))
-			break
-		end
-	end
-
+	
 	-- localize prop locations
 	INFMAP.validate_constraints(ent1)
 	INFMAP.validate_constraints(ent2)
 	INFMAP.merge_constraints(ent2.INFMAP_CONSTRAINTS, ent1.INFMAP_CONSTRAINTS)
 
+	-- Localize constraint data
+	if self:IsChunkValid() then
+		self:INFMAP_SetPos(INFMAP.unlocalize(self:INFMAP_GetPos(), self:GetChunk() - ent1:GetChunk()))
+
+		local keys = self:GetKeyValues()
+		local chunk_offset = -ent1:GetChunk() -- constraints are localized around ent1
+		for _, str in ipairs(constraint_localize) do
+			local pos = keys[str]
+			if pos then
+				self:SetKeyValue(str, tostring(INFMAP.unlocalize(Vector(pos), chunk_offset)))
+				break
+			end
+		end
+	end
+	
 	-- Spawn
 	self:INFMAP_Spawn()
 end, true)
@@ -135,9 +149,15 @@ detour(PHYSOBJ, "GetPos", function(self, pos)
 end)
 
 detour(PHYSOBJ, "SetPos", function(self, pos)
-	local pos, chunk = INFMAP.localize(pos)
-	self:GetEntity():SetChunk(chunk)
-	self:INFMAP_SetPos(pos)
+	local ent = self:GetEntity()
+	if INFMAP.in_bounds(pos) then
+		ent:SetChunk(nil)
+		self:INFMAP_SetPos(pos)
+	else
+		local pos, chunk = INFMAP.localize(pos)
+		ent:SetChunk(chunk)
+		self:INFMAP_SetPos(pos)
+	end
 end)
 
 detour(PHYSOBJ, "LocalToWorld", function(self, pos)
@@ -209,18 +229,14 @@ end
 
 -- traces
 local function detour_trace(trace_func, data, extra)
-	-- store original data that will be overwritten
 	local old_start = data.start
 
 	-- early check, incase we're in source bounds...
-	if 
-		old_start[1] < 2^14 and old_start[1] > -2^14 and
-		old_start[2] < 2^14 and old_start[2] > -2^14 and
-		old_start[3] < 2^14 and old_start[3] > -2^14
-	then
+	if INFMAP.in_bounds(old_start) then
 		return trace_func(data, extra)
 	end
 
+	-- store original data that will be overwritten
 	local old_endpos = data.endpos
 	local old_filter = data.filter
 
@@ -258,6 +274,16 @@ end, true)
 -------------------
 -- ADDON DETOURS --
 -------------------
+-- toolgun
+hook.Add("PreRegisterSWEP", "infmap_toolgundetour", function(SWEP, class)
+    if class == "gmod_tool" then
+		detour(SWEP, "DoShootEffect", function(self, pos, ...)
+			self:INFMAP_DoShootEffect(INFMAP.unlocalize(pos, -self:GetOwner():GetChunk()), ...)
+		end)
+	end
+end)
+
+-- wire
 hook.Add("Initialize", "infmap_wire_detour", function()
 	if WireLib then	-- wiremod unclamp
 		function WireLib.clampPos(pos)
@@ -265,7 +291,7 @@ hook.Add("Initialize", "infmap_wire_detour", function()
 		end
 	end
 
-	if SF then	-- starfall unclamp
+	if SF and string.find(SF.Version, "Neostarfall") then -- neosf unclamp
 		function SF.clampPos(pos)
 			return pos 
 		end
