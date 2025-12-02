@@ -3,7 +3,7 @@
 ------------
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:GetChunk()
-	return INFMAP.Vector(self.INFMAP_CHUNK)
+	return self.INFMAP_CHUNK and INFMAP.Vector(self.INFMAP_CHUNK) or nil
 end
 
 function ENTITY:IsChunkValid()

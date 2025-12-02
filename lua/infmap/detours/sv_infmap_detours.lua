@@ -63,6 +63,7 @@ end)
 -- VEHICLE DETOURS --
 ---------------------
 local VEHICLE = FindMetaTable("Vehicle")
+
 detour(VEHICLE, "SetPos", ENTITY.SetPos, true)
 
 ------------------------
@@ -75,13 +76,6 @@ local constraint_localize = {
 	"hingeaxis", 
 	"axis", 
 	"position2"
-}
-
--- !!!HACK!!! Entity.IsConstraint is false for these
-local constraint_classes = {
-	["phys_spring"] = true,
-	["phys_slideconstraint"] = true,
-	["phys_torque"] = true
 }
 
 -- !!!HACK!!! GetPhysConstraintObjects and GetConstrainedEntities return `nil` before :Spawn is called, requiring a detour
@@ -105,6 +99,10 @@ detour(ENTITY, "Spawn", function(self)
 
 	-- STOP!!! we're about to create a constraint with 2 entities, we need to localize all the data
 	local ent1, ent2 = self.INFMAP_PHYS_CONSTRAINT_OBJECTS[1], self.INFMAP_PHYS_CONSTRAINT_OBJECTS[2]
+	if ent1:IsChunkValid() != ent2:IsChunkValid() then
+		error("Tried to constrain 2 objects in different coordinate systems!")
+		return
+	end
 	
 	-- localize prop locations
 	INFMAP.validate_constraints(ent1)

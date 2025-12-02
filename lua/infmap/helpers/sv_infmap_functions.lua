@@ -33,18 +33,20 @@ function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
 	end
 
 	local ent2 = ent2_constrained.parent
-	local chunk_valid = ent2:IsChunkValid()
-	local chunk_offset = ent2:GetChunk()
-	
+	local ent2_chunk = ent2:GetChunk()
 	for e, _ in pairs(ent1_constrained) do
 		if !isentity(e) then continue end
 
 		ent2_constrained[e] = true
 		e.INFMAP_CONSTRAINTS = ent2_constrained
-		local chunk = e:GetChunk() - chunk_offset
-		if !chunk:IsZero() then
-			INFMAP.unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk))
-			e:SetChunk(chunk_valid and chunk_offset or nil)
+
+		-- localize ent
+		if ent2_chunk then
+			local chunk_offset = (e:GetChunk() or ent2_chunk) - ent2_chunk
+			if !chunk_offset:IsZero() then
+				INFMAP.unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset))
+				e:SetChunk(ent2_chunk)
+			end
 		end
 	end
 

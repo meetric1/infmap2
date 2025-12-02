@@ -48,8 +48,7 @@ function ENTITY:SetChunk(chunk)
 	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride) -- self.RenderOverride = self.INFMAP_RenderOverride
 
 	local lp = LocalPlayer()
-	local offset = self:GetChunk() - lp:GetChunk()
-	if !lp:IsChunkValid() or offset:IsZero() or INFMAP.filter_render(self) then
+	if !lp:IsChunkValid() or !self:IsChunkValid() or INFMAP.filter_render(self) then
 		if self.INFMAP_RENDER_BOUNDS then
 			self:INFMAP_SetRenderBounds(self.INFMAP_RENDER_BOUNDS[1], self.INFMAP_RENDER_BOUNDS[2])
 			self.INFMAP_RENDER_BOUNDS = nil
@@ -63,7 +62,7 @@ function ENTITY:SetChunk(chunk)
 	else
 		-- visually offset entity
 		self.INFMAP_RENDER_BOUNDS = self.INFMAP_RENDER_BOUNDS or {self:INFMAP_GetRenderBounds()}
-		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, offset)
+		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, chunk - lp:GetChunk())
 
 		-- "RenderMultiply" does not work on some entities, so we need a full cam detour
 		if INFMAP.filter_render_fancy(self) then
@@ -145,8 +144,9 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	if !debug_enabled:GetBool() then return end
 
 	local lp = LocalPlayer()
+	local chunk = lp:GetChunk() or INFMAP.Vector()
 	local cs = Vector(1, 1, 1) * INFMAP.chunk_size
-	local co = INFMAP.unlocalize(vector_origin, lp:GetChunk())--chunk_offset * INFMAP.chunk_size * 2
+	local co = INFMAP.unlocalize(vector_origin, chunk)--chunk_offset * INFMAP.chunk_size * 2
 	
 	render.DrawWireframeSphere(Vector(), 10, 10, 10, Color(255, 0, 0, 255), true)
 	render.DrawWireframeBox(INFMAP.chunk_origin, Angle(), -cs, cs, Color(255, 255, 255, 0), true)
@@ -190,6 +190,6 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	cam.Start2D()
 		draw.DrawText("client chunk: " .. concat_vector(lp.INFMAP_CHUNK), "TargetID", nil, 130)
 		draw.DrawText("client pos: " .. concat_vector(lp:INFMAP_GetPos()), "TargetID", nil, 150)
-		draw.DrawText("server pos: " .. concat_vector(INFMAP.unlocalize(lp:INFMAP_GetPos(), lp:GetChunk())), "TargetID", nil, 170)
+		draw.DrawText("server pos: " .. concat_vector(INFMAP.unlocalize(lp:INFMAP_GetPos(), chunk)), "TargetID", nil, 170)
 	cam.End2D()
 end)

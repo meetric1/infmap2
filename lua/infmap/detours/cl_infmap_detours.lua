@@ -5,7 +5,7 @@ local function detour(metatable, func_name, detoured_func, force)
 
 	metatable[original_func_name] = original_func
 	metatable[func_name] = force and detoured_func or function(self, ...)
-		if self:IsChunkValid() then
+		if self:IsChunkValid() and LocalPlayer():IsChunkValid() then
 			return detoured_func(self, ...)
 		else
 			return original_func(self, ...)
@@ -19,7 +19,7 @@ end
 local ENTITY = FindMetaTable("Entity")
 
 detour(ENTITY, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(INFMAP.clamp_pos(pos))
+	self:INFMAP_SetPos(INFMAP.clamp_pos(pos)) -- shut console up
 end)
 
 detour(ENTITY, "GetPos", function(self)
@@ -85,7 +85,7 @@ end, true)
 local PHYSOBJ = FindMetaTable("PhysObj")
 
 detour(PHYSOBJ, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(INFMAP.clamp_pos(pos))
+	self:INFMAP_SetPos(INFMAP.clamp_pos(pos)) -- shut console up
 end)
 
 ---------------------
