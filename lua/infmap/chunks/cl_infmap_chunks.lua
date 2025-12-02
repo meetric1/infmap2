@@ -38,72 +38,89 @@ end)
 -------------
 -- GLOBALS --
 -------------
--- TODO: physgun glow probably shows up in other chunks
+local function disable_render_offset(ent)
+	if ent.INFMAP_RENDER_BOUNDS then
+		ent:INFMAP_SetRenderBounds(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
+		ent.INFMAP_RENDER_BOUNDS = nil
+	end
+
+	ent.CalcAbsolutePosition = nil
+
+	ent:SetLOD(-1)
+	ent:DisableMatrix("RenderMultiply")
+	ent:INFMAP___newindex("RenderOverride", ent.INFMAP_RenderOverride) -- ent.RenderOverride = ent.INFMAP_RenderOverride
+
+	force_renderbounds[ent] = nil
+end
+
+local function enable_render_offset(ent, chunk_offset)
+	-- visually offset entity
+	ent.INFMAP_RENDER_BOUNDS = ent.INFMAP_RENDER_BOUNDS or {ent:INFMAP_GetRenderBounds()}
+	ent.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, chunk_offset)
+
+	-- "RenderMultiply" does not work on some entities, so we need a full cam detour
+	if INFMAP.filter_render_fancy(ent) then
+		local render_func = ent.INFMAP_RenderOverride or ent.DrawModel
+		ent:INFMAP___newindex("RenderOverride", function(self, flags) -- ent.RenderOverride = function
+			cam.Start3D(EyePos() - self.INFMAP_RENDER_OFFSET)
+				render_func(self, flags == 0 and 1 or flags)
+			cam.End3D()
+		end)
+	else
+		-- we need to orient the matrix back, since it has already been rotated
+		-- (SELF * INV_ANG * TRANSLATE * ANG)
+		local offset_ang = Matrix()
+		local offset_pos = Matrix()
+		offset_pos:SetTranslation(ent.INFMAP_RENDER_OFFSET)
+
+		-- TODO: do we need a CalcAbsolutePosition detour?
+		ent.CalcAbsolutePosition = function(self, pos, ang)
+			offset_pos:SetAngles(ang)
+			offset_ang:Identity()
+			offset_ang:SetAngles(ang)
+			offset_ang:Invert()
+			offset_ang:Mul(offset_pos)
+
+			self:EnableMatrix("RenderMultiply", offset_ang)
+		end
+
+		ent:SetLOD(0)
+		ent:CalcAbsolutePosition(ent:INFMAP_GetPos(), ent:GetAngles())
+		ent:INFMAP___newindex("RenderOverride", ent.INFMAP_RenderOverride) -- ent.RenderOverride = ent.INFMAP_RenderOverride
+	end
+
+	force_renderbounds[ent] = true
+end
+
+-- TODO: physgun glow shows up in other chunks
+-- TODO: this code is quite messy
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
 	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
 	if !err and prevent then return end
 
 	self.INFMAP_CHUNK = chunk
-	self:INFMAP___newindex("RenderOverride", self.INFMAP_RenderOverride) -- self.RenderOverride = self.INFMAP_RenderOverride
 
-	local lp = LocalPlayer()
-	if !lp:IsChunkValid() or !self:IsChunkValid() or INFMAP.filter_render(self) then
-		if self.INFMAP_RENDER_BOUNDS then
-			self:INFMAP_SetRenderBounds(self.INFMAP_RENDER_BOUNDS[1], self.INFMAP_RENDER_BOUNDS[2])
-			self.INFMAP_RENDER_BOUNDS = nil
-		end
-
-		self.CalcAbsolutePosition = nil
-		self:DisableMatrix("RenderMultiply")
-		self:SetLOD(-1)
-
-		force_renderbounds[self] = nil
+	-- offset rendering (or dont. idc)
+	local local_player = LocalPlayer()
+	if !chunk or !local_player:IsChunkValid() or INFMAP.filter_render(self) then
+		disable_render_offset(self)
 	else
-		-- visually offset entity
-		self.INFMAP_RENDER_BOUNDS = self.INFMAP_RENDER_BOUNDS or {self:INFMAP_GetRenderBounds()}
-		self.INFMAP_RENDER_OFFSET = INFMAP.unlocalize(vector_origin, chunk - lp:GetChunk())
-
-		-- "RenderMultiply" does not work on some entities, so we need a full cam detour
-		if INFMAP.filter_render_fancy(self) then
-			local render_func = self.INFMAP_RenderOverride or self.DrawModel
-			self:INFMAP___newindex("RenderOverride", function(self, flags) -- self.RenderOverride = function
-				cam.Start3D(EyePos() - self.INFMAP_RENDER_OFFSET)
-					render_func(self, flags == 0 and 1 or flags)
-				cam.End3D()
-			end)
+		local chunk_offset = chunk - local_player:GetChunk()
+		if !chunk_offset:IsZero() then
+			enable_render_offset(self, chunk_offset)
 		else
-			-- we need to orient the matrix back, since it has already been rotated
-			-- (SELF * INV_ANG * TRANSLATE * ANG)
-			local offset_ang = Matrix()
-			local offset_pos = Matrix()
-			offset_pos:SetTranslation(self.INFMAP_RENDER_OFFSET)
-
-			-- TODO: do we need a CalcAbsolutePosition detour?
-			self.CalcAbsolutePosition = function(self, pos, ang)
-				offset_pos:SetAngles(ang)
-				offset_ang:Identity()
-				offset_ang:SetAngles(ang)
-				offset_ang:Invert()
-				offset_ang:Mul(offset_pos)
-
-				self:EnableMatrix("RenderMultiply", offset_ang)
-			end
-
-			self:CalcAbsolutePosition(self:INFMAP_GetPos(), self:GetAngles())
-			self:SetLOD(0)
+			disable_render_offset(self)
 		end
-
-		force_renderbounds[self] = true
 	end
 
 	-- if our local client updated we need to update everything else
-	if self != lp then return end
+	if self != local_player then return end
 
-	lp:SetCustomCollisionCheck(chunk and true or false)
-
+	local_player:SetCustomCollisionCheck(chunk and true or false)
 	for _, ent in ents.Iterator() do
-		if ent == lp or INFMAP.filter_render(ent) then continue end
+		if ent == local_player or INFMAP.filter_render(ent) or !ent:IsChunkValid() then continue end
+
 		ent:SetChunk(ent.INFMAP_CHUNK) -- force update
 	end
 end
