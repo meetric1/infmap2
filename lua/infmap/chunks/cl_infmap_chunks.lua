@@ -70,7 +70,7 @@ function ENTITY:SetChunk(chunk)
 			local render_func = self.INFMAP_RenderOverride or self.DrawModel
 			self:INFMAP___newindex("RenderOverride", function(self, flags) -- self.RenderOverride = function
 				cam.Start3D(EyePos() - self.INFMAP_RENDER_OFFSET)
-					render_func(self, flags > 0 and flags or 1)
+					render_func(self, flags == 0 and 1 or flags)
 				cam.End3D()
 			end)
 		else
