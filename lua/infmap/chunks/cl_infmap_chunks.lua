@@ -35,24 +35,6 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 	end
 end)
 
--------------
--- GLOBALS --
--------------
-local function disable_render_offset(ent)
-	if ent.INFMAP_RENDER_BOUNDS then
-		ent:INFMAP_SetRenderBounds(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
-		ent.INFMAP_RENDER_BOUNDS = nil
-	end
-
-	ent.CalcAbsolutePosition = nil
-
-	ent:SetLOD(-1)
-	ent:DisableMatrix("RenderMultiply")
-	ent:INFMAP___newindex("RenderOverride", ent.INFMAP_RenderOverride) -- ent.RenderOverride = ent.INFMAP_RenderOverride
-
-	force_renderbounds[ent] = nil
-end
-
 local function enable_render_offset(ent, chunk_offset)
 	-- visually offset entity
 	ent.INFMAP_RENDER_BOUNDS = ent.INFMAP_RENDER_BOUNDS or {ent:INFMAP_GetRenderBounds()}
@@ -92,6 +74,24 @@ local function enable_render_offset(ent, chunk_offset)
 	force_renderbounds[ent] = true
 end
 
+local function disable_render_offset(ent)
+	if ent.INFMAP_RENDER_BOUNDS then
+		ent:INFMAP_SetRenderBounds(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
+		ent.INFMAP_RENDER_BOUNDS = nil
+	end
+
+	ent.CalcAbsolutePosition = nil
+
+	ent:SetLOD(-1)
+	ent:DisableMatrix("RenderMultiply")
+	ent:INFMAP___newindex("RenderOverride", ent.INFMAP_RenderOverride) -- ent.RenderOverride = ent.INFMAP_RenderOverride
+
+	force_renderbounds[ent] = nil
+end
+
+-------------
+-- GLOBALS --
+-------------
 -- TODO: physgun glow shows up in other chunks
 -- TODO: this code is quite messy
 local ENTITY = FindMetaTable("Entity")

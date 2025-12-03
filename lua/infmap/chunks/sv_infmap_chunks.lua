@@ -111,14 +111,10 @@ local function update_entity(ent, chunk)
 	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
 		if !isentity(e) then continue end
 
-		-- sorry other players..
-		if e != ent then
-			e:ForcePlayerDrop()
-		end
-
 		-- wrap
 		local chunk_offset = e:GetChunk() - chunk
 		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset)
+
 		e:SetChunk(chunk)
 		INFMAP.unfucked_setpos(e, pos)
 	end
@@ -167,9 +163,6 @@ hook.Add("Think", "infmap_wrap", function()
 			if IsValid(holding) then
 				validate_pickup(holding)
 				update_entity(holding, chunk)
-
-				-- for the rare case where 2 players are holding the same object
-				for p, e in pairs(player_pickups) do if e == holding and p != ent then p:DropObject() end end
 			end
 		end
 	end

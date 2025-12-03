@@ -24,6 +24,13 @@ function INFMAP.unfucked_setpos(ent, pos)
 			ent:INFMAP_SetPos(pos)
 		end
 	end
+
+	-- for the rare case where 2 players are holding the same object
+	for _, ply in player.Iterator() do
+		if !ent:InChunk(ply) then
+			ply:DropObject(ent)
+		end
+	end
 end
 
 -- merges 2 contraptions into the same chunk (ent1 -> ent2)
@@ -64,16 +71,7 @@ function INFMAP.validate_constraints(ent, prev)
 	end
 
 	if IsValid(prev) then
-		local ent_constrained = ent.INFMAP_CONSTRAINTS
-		local prev_constrained = prev.INFMAP_CONSTRAINTS
-		if ent_constrained == prev_constrained then return end
-
-		for e, _ in pairs(ent_constrained) do
-			if !isentity(e) then continue end
-
-			prev_constrained[e] = true
-			e.INFMAP_CONSTRAINTS = prev_constrained
-		end
+		if !INFMAP.merge_constraints(ent, prev) then return end
 	end
 
 	-- recurse

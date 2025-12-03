@@ -10,5 +10,5 @@ function ENT:KeyValue(key, value)
 end
 
 function ENT:Initialize()
-
+	self:SetNoDraw(true)
 end

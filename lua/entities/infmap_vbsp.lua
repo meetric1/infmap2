@@ -66,6 +66,8 @@ function ENT:EndTouch(ent)
 	if ent:IsMarkedForDeletion() or ent:IsChunkValid() then return end
 
 	INFMAP.validate_constraints(ent)
+	if !ent.INFMAP_CONSTRAINTS then return end
+	
 	ent = ent.INFMAP_CONSTRAINTS.parent
 	if INFMAP.filter_teleport(ent, true) then return end
 
