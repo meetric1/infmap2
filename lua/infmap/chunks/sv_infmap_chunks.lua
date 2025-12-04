@@ -189,13 +189,13 @@ local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
 	local prev_chunk = self.INFMAP_CHUNK
 	if chunk == prev_chunk then return end
-
-	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
-	if !err and prevent then return end
 	
 	if chunk != nil then
 		chunk = INFMAP.Vector(chunk) -- copy
 	end
+
+	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
+	if !err and prevent then return end
 
 	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(chunk))
 	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!

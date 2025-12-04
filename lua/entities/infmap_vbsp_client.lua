@@ -8,6 +8,15 @@ ENT.PrintName = "infmap_vbsp_client"
 
 if !INFMAP then return end
 
+function ENT:SetupDataTables()
+    self:NetworkVar("Vector", 0, "VBSPPos")
+	self:NetworkVar("Vector", 1, "VBSPSize")
+end
+
+function ENT:UpdateTransmitState()
+	return TRANSMIT_ALWAYS
+end
+
 local vbsps = {}
 function ENT:Initialize()
 	self:SetNotSolid(true)
@@ -19,15 +28,6 @@ function ENT:Initialize()
 	self:SetRenderBounds(-size, size)
 	self.INFMAP_VBSP_CHECK = {}
 	vbsps[INFMAP.encode_vector(self:GetChunk())] = self
-end
-
-function ENT:SetupDataTables()
-    self:NetworkVar("Vector", 0, "VBSPPos")
-	self:NetworkVar("Vector", 1, "VBSPSize")
-end
-
-function ENT:UpdateTransmitState()
-	return TRANSMIT_ALWAYS
 end
 
 -- INFMAP -> VBSP
@@ -49,10 +49,10 @@ end
 
 -- VBSP -> INFMAP
 hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
-	local lp = LocalPlayer()
-	if lp:IsChunkValid() then return end
+	local local_player = LocalPlayer()
+	if local_player:IsChunkValid() then return end
 
-	local vbsp = lp:GetNWEntity("INFMAP_VBSP")
+	local vbsp = local_player:GetNWEntity("INFMAP_VBSP")
 	if !IsValid(vbsp) then return end
 	
 	local origin = INFMAP.chunk_origin
