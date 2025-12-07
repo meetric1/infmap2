@@ -24,7 +24,7 @@ function ENT:Initialize()
 
 	if SERVER then return end
 
-	local size = self:GetVBSPSize() / 2
+	local size = self:GetVBSPSize()
 	self:SetRenderBounds(-size, size)
 	self.INFMAP_VBSP_CHECK = {}
 	vbsps[INFMAP.encode_vector(self:GetChunk())] = self
@@ -33,7 +33,7 @@ end
 -- INFMAP -> VBSP
 function ENT:Draw()
 	-- all entities in here SHOULD have invalid chunks
-	local size = self:GetVBSPSize() / 2
+	local size = self:GetVBSPSize()
 	local vbsp_pos = self:GetVBSPPos()
 	local force_draw = ents.FindInBox(vbsp_pos - size, vbsp_pos + size)
 	cam.Start3D(EyePos() + vbsp_pos - self:GetPos())

@@ -8,9 +8,7 @@ if !INFMAP then return end
 
 -- TODO: better teleporting. ideally reuse chunk wrapping code
 local function update_entity(ent, offset, chunk)
-	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
-		if !isentity(e) then continue end
-
+	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
 		if e:IsPlayer() then e:DropObject() end
 		e:ForcePlayerDrop()
 
@@ -41,7 +39,7 @@ function ENT:Initialize()
 	local client_vbsp = ents.Create("infmap_vbsp_client")
 	client_vbsp:INFMAP_SetPos(pos_world)
 	client_vbsp:SetVBSPPos(pos_local)
-	client_vbsp:SetVBSPSize(maxs - mins)
+	client_vbsp:SetVBSPSize((maxs - mins) / 2)
 	client_vbsp:SetChunk(self.INFMAP_VBSP_CHUNK)
 	--client_vbsp:SetModel("models/sstrp/mcculloch.mdl")
 	client_vbsp:Spawn()

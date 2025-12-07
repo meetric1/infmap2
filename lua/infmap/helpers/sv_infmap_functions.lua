@@ -39,12 +39,9 @@ function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
 		return false
 	end
 
-	local ent2 = ent2_constrained.parent
-	local ent2_chunk = ent2:GetChunk()
-	for e, _ in pairs(ent1_constrained) do
-		if !isentity(e) then continue end
-
-		ent2_constrained[e] = true
+	local ent2_chunk = ent2_constrained.parent:GetChunk()
+	for _, e in ipairs(ent1_constrained) do
+		table.insert(ent2_constrained, e)
 		e.INFMAP_CONSTRAINTS = ent2_constrained
 
 		-- localize ent
@@ -67,34 +64,22 @@ function INFMAP.validate_constraints(ent, prev)
 
 	-- TODO: optimize (don't need to initialize ent table if prev exists)
 	if !ent.INFMAP_CONSTRAINTS then
-		ent.INFMAP_CONSTRAINTS = {[ent] = true, ["parent"] = ent}
+		ent.INFMAP_CONSTRAINTS = {[1] = ent, ["parent"] = ent}
 	end
 
 	if IsValid(prev) then
-		if !INFMAP.merge_constraints(ent, prev) then return end
+		if !INFMAP.merge_constraints(ent.INFMAP_CONSTRAINTS, prev.INFMAP_CONSTRAINTS) then return end
 	end
 
 	-- recurse
-	for _, constrained in ipairs(constraint.GetTable(ent)) do
-		if INFMAP.filter_constraint(constrained.Constraint) then continue end
+	for _, constraints in ipairs(constraint.GetTable(ent)) do
+		if INFMAP.filter_constraint(constraints.Constraint) then continue end
 
-		for _, e in pairs(constrained.Entity) do
+		for _, e in pairs(constraints.Entity) do
 			e = e.Entity
 
 			if e == ent then continue end
 			INFMAP.validate_constraints(e, ent)
 		end
-	end
-end
-
-function INFMAP.invalidate_constraints(ent)
-	local constrained = ent.INFMAP_CONSTRAINTS
-	if !constrained then return end -- duh, already invalid
-
-	for e, _ in pairs(constrained) do
-		if !IsValid(e) or !isentity(e) then continue end
-
-		e.INFMAP_CONSTRAINTS = nil
-		e.INFMAP_DIRTY_WRAP = true -- for teleporting
 	end
 end

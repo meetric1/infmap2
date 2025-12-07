@@ -1,45 +1,3 @@
------------------
--- CONSTRAINTS --
------------------
--- rest of the algorithm in sv_infmap_detours.lua!
-hook.Add("EntityRemoved", "infmap_constraint", function(ent)
-	if !IsValid(ent) or !ent:IsConstraint() then return end
-
-	for _, e in ipairs({ent.Ent1, ent.Ent2}) do
-		if !IsValid(e) then continue end
-		
-		INFMAP.invalidate_constraints(e)
-	end
-end)
-
----------------------
--- PHYSGUN SUPPORT --
----------------------
-local function validate_pickup(ent)
-	INFMAP.validate_constraints(ent)
-
-	if ent.INFMAP_CONSTRAINTS then
-		ent.INFMAP_CONSTRAINTS.parent = ent
-	end
-end
-
-local player_pickups = {}
-local function player_pickup(ply, ent) -- key = player, value = prop
-	player_pickups[ply] = ent
-	validate_pickup(ent)
-end
-
-local function player_drop(ply, ent) 
-	player_pickups[ply] = nil
-end
-
-hook.Add("OnPhysgunPickup", "infmap_pickup", player_pickup)
-hook.Add("PhysgunDrop", "infmap_pickup", player_drop)
-hook.Add("GravGunOnPickedUp", "infmap_pickup", player_pickup)
-hook.Add("GravGunOnDropped", "infmap_pickup", player_drop)
-hook.Add("OnPlayerPhysicsPickup", "infmap_pickup", player_pickup)
-hook.Add("OnPlayerPhysicsDrop", "infmap_pickup", player_drop)
-
 ---------------------------
 -- CROSS-CHUNK COLLISION --
 ---------------------------
@@ -106,11 +64,48 @@ end
 ---------------------
 -- ENTITY WRAPPING --
 ---------------------
--- entity teleporting logic
-local function update_entity(ent, chunk)
-	for e, _ in pairs(ent.INFMAP_CONSTRAINTS) do
-		if !isentity(e) then continue end
+-- which entities should be checked to be wrapped, per frame
+local check_ents = {}
+local function check_ent(ent)
+	if !INFMAP.filter_teleport(ent) then
+		check_ents[ent] = true
+		return true
+	else
+		check_ents[ent] = nil
+		return false
+	end
+end
 
+-- physgun support
+local function validate_pickup(ent)
+	INFMAP.validate_constraints(ent)
+
+	if ent.INFMAP_CONSTRAINTS then
+		ent.INFMAP_CONSTRAINTS.parent = ent
+		check_ent(ent)
+	end
+end
+
+local player_pickups = {}
+local function player_pickup(ply, ent) -- key = player, value = prop
+	player_pickups[ply] = ent
+	validate_pickup(ent)
+end
+
+local function player_drop(ply, ent) 
+	player_pickups[ply] = nil
+end
+
+hook.Add("OnPhysgunPickup", "infmap_pickup", player_pickup)
+hook.Add("PhysgunDrop", "infmap_pickup", player_drop)
+hook.Add("GravGunOnPickedUp", "infmap_pickup", player_pickup)
+hook.Add("GravGunOnDropped", "infmap_pickup", player_drop)
+hook.Add("OnPlayerPhysicsPickup", "infmap_pickup", player_pickup)
+hook.Add("OnPlayerPhysicsDrop", "infmap_pickup", player_drop)
+
+-- wrapping logic
+local function update_entity(ent, chunk)
+	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
 		-- wrap
 		local chunk_offset = e:GetChunk() - chunk
 		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset)
@@ -120,39 +115,25 @@ local function update_entity(ent, chunk)
 	end
 end
 
--- which entities should be checked per frame (optimization filter)
--- TODO: should we refactor this?
-local check_ents = {}
-timer.Create("infmap_wrap_check", 0.1, 0, function()
-	check_ents = {}
-
-	for _, ent in ents.Iterator() do
-		update_cross_chunk_collision(ent)
-
-		if (!ent:GetVelocity():IsZero() or ent.INFMAP_DIRTY_WRAP) and !INFMAP.filter_teleport(ent) then 
-			table.insert(check_ents, ent)
-		end
-
-		ent.INFMAP_DIRTY_WRAP = nil -- TODO: REMOVE ME!! We should be directly shoving into check_ents
-	end
-end)
-
 -- wrapping (teleporting)
 hook.Add("Think", "infmap_wrap", function()
-	for _, ent in ipairs(check_ents) do
-		if !IsValid(ent) then continue end
+	for ent, _ in pairs(check_ents) do
+		if !IsValid(ent) then
+			check_ents[ent] = nil
+			continue
+		end
+		
 		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() then continue end
-
 		INFMAP.validate_constraints(ent)
-		if INFMAP.filter_teleport(ent) then continue end -- required check just incase the constraint table updated
+		if !check_ent(ent) then continue end
 
 		-- time to teleport
 		local _, chunk = INFMAP.localize(ent:INFMAP_GetPos())
 		chunk = chunk + ent:GetChunk()
 
 		-- hook support (slow..)
-		local err, prevent = INFMAP.hook_run_safe("OnChunkWrap", ent, chunk)
-		if !err and prevent then continue end
+		--local err, prevent = INFMAP.hook_run_safe("OnChunkWrap", ent, chunk)
+		--if !err and prevent then continue end
 
 		-- teleport
 		update_entity(ent, chunk)
@@ -164,6 +145,27 @@ hook.Add("Think", "infmap_wrap", function()
 				validate_pickup(holding)
 				update_entity(holding, chunk)
 			end
+		end
+	end
+end)
+
+-----------------
+-- CONSTRAINTS --
+-----------------
+-- rest of the algorithm in sv_infmap_detours.lua!
+hook.Add("EntityRemoved", "infmap_constraint", function(ent)
+	if !IsValid(ent) or !ent:IsConstraint() then return end
+
+	for _, e in ipairs({ent.Ent1, ent.Ent2}) do
+		if !IsValid(e) then continue end
+		
+		local constraints = e.INFMAP_CONSTRAINTS
+		if !constraints then continue end -- duh, already invalid
+
+		-- invalidate constraints
+		for _, e in ipairs(constraints) do
+			e.INFMAP_CONSTRAINTS = nil
+			check_ent(e)
 		end
 	end
 end)
@@ -189,18 +191,19 @@ local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
 	local prev_chunk = self.INFMAP_CHUNK
 	if chunk == prev_chunk then return end
-	
-	if chunk != nil then
-		chunk = INFMAP.Vector(chunk) -- copy
-	end
 
 	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
 	if !err and prevent then return end
 
+	if chunk != nil then
+		chunk = INFMAP.Vector(chunk) -- copy
+	end
+	
 	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(chunk))
 	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
-	update_cross_chunk_collision(self)
+	--update_cross_chunk_collision(self) -- delete clones
+	check_ent(self)
 
 	-- parent support (recursive)
 	for _, ent in ipairs(self:GetChildren()) do

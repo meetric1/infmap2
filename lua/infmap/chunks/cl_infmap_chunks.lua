@@ -3,7 +3,7 @@
 ---------------
 -- when bounding box is outside of world bounds the object isn't rendered
 -- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
--- TODO: this kinda sucks. should we do our own culling?
+-- TODO: NeedsDepthPass to set bounds, for RenderView "support"
 local force_renderbounds = {}
 hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 	for ent, _ in pairs(force_renderbounds) do
@@ -93,10 +93,12 @@ end
 -- GLOBALS --
 -------------
 -- TODO: physgun glow shows up in other chunks
--- TODO: this code is quite messy
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
-	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, self.INFMAP_CHUNK)
+	local prev_chunk = self.INFMAP_CHUNK
+	if !chunk and !prev_chunk then return end
+
+	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
 	if !err and prevent then return end
 
 	self.INFMAP_CHUNK = chunk
@@ -119,7 +121,7 @@ function ENTITY:SetChunk(chunk)
 
 	local_player:SetCustomCollisionCheck(chunk and true or false)
 	for _, ent in ents.Iterator() do
-		if ent == local_player or INFMAP.filter_render(ent) or !ent:IsChunkValid() then continue end
+		if ent == local_player or INFMAP.filter_render(ent) then continue end
 
 		ent:SetChunk(ent.INFMAP_CHUNK) -- force update
 	end
@@ -184,7 +186,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 	end]]
 
 	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp_client")) do
-		local size = vbsp:GetVBSPSize() / 2
+		local size = vbsp:GetVBSPSize()
 		render.DrawWireframeBox(
 			vbsp:GetPos(), 
 			Angle(), 
