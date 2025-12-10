@@ -39,16 +39,6 @@ local QUADTREE_FUNCS = {
 			INFMAP.Quadtree({x + size, y + size, z}, size, self.path .. "4")
 		}
 	end,
-	["split_pos"] = function(self, pos)
-		if !should_split_pos(self, pos) then return end
-
-		-- recursively split
-		self:split()
-		self.children[1]:split_pos(pos)
-		self.children[2]:split_pos(pos)
-		self.children[3]:split_pos(pos)
-		self.children[4]:split_pos(pos)
-	end,
 	["traverse_path"] = function(self, path)
 		for i = 1, #path do
 			self:split()
