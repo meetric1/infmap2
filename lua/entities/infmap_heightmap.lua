@@ -306,7 +306,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 		if !quadtree or !quadtree.imesh then continue end
 
 		local offset = INFMAP.unlocalize(quadtree.pos, local_player_chunk - heightmap:GetChunk())
-		render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
+		render.SetMaterial(Material("models/wireframe"))
 		imesh_offset:SetTranslation(-offset)
 		offset:Add(eye_pos)
 		cam.PushModelMatrix(imesh_offset)
