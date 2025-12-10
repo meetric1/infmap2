@@ -6,7 +6,7 @@ ENT.PrintName = "infmap_vbsp"
 
 if !INFMAP then return end
 
--- TODO: better teleporting. ideally reuse chunk wrapping code
+-- TODO: physgun support
 local function update_entity(ent, offset, chunk)
 	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
 		if e:IsPlayer() then e:DropObject() end
