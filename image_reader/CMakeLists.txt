@@ -6,14 +6,14 @@ project(${PROJECT_NAME})
 set(CMAKE_CONFIGURATION_TYPES Release Debug)
 set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory(gmod-module-base/include)
+add_subdirectory(libs/gmod-module-base/include)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-	gmod-module-base/include
-	stb
+	libs/gmod-module-base/include
+	libs/stb
 	src
 )
 
