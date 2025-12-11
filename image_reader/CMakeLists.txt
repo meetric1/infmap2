@@ -8,16 +8,15 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(gmod-module-base/include)
 
-#file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.cpp")
-add_library(${PROJECT_NAME} SHARED
-	main.cpp
-)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    gmod-module-base/include
-    stb
+	gmod-module-base/include
+	stb
+	src
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    gmod-module-base
+	gmod-module-base
 )
