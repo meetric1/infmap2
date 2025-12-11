@@ -41,9 +41,8 @@ end
 
 function ENT:KeyValue(key, value)
 	if key == "path" then
-		value = "materials/" .. value
-		print(value)
-		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read("materials/Wolf_Run_Height_Map_8192x8192_0_0.png", "GAME"))--ImageReader(file.Read(value, "GAME")) -- defined in imagereader .dll
+		--value = "materials/" .. value
+		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read("materials/high_bits.png", "GAME"))--ImageReader(file.Read(value, "GAME")) -- defined in imagereader.dll
 	elseif key == "origin" then
 		self:SetChunk(INFMAP.Vector(0, 0, 0))
 	end
@@ -154,7 +153,8 @@ if SERVER then
 						for x = 0, RESOLUTION do
 							net.WriteUInt(heightmap.INFMAP_HEIGHTMAP_SAMPLER:Get(
 								(tree.pos[1] + x * mult) * inv_res, 
-								(tree.pos[2] + y * mult) * inv_res
+								(tree.pos[2] + y * mult) * inv_res,
+								false
 							), 16)
 						end
 					end
@@ -175,56 +175,59 @@ local function generate_tree(tree, metadata)
 	assert(res <= 91)
 
 	local res_1 = res - 1
+	local res_2 = res_1 - 1
 	local scale = tree.size / res_1
 	local offset_x, offset_y, offset_z = tree.pos[1], tree.pos[2], tree.pos[3]
 
+	local function vertex(x, y, z, u, v)
+		mesh.Position(x, y, z)
+		--mesh.Normal(normal)
+		mesh.TexCoord(0, u, v)
+		mesh.AdvanceVertex()
+	end
+
+	local quads = (res_1 * res_1)
+	assert(quads <= 8192)
+
 	local imesh = Mesh()
-	mesh.Begin(imesh, MATERIAL_QUADS, res_1 * res_1)
-	for y = 0, res_1 - 1 do
-		for x = 0, res_1 - 1 do
+	mesh.Begin(imesh, MATERIAL_QUADS, quads)
+	for y = 0, res_2 do
+		for x = 0, res_2 do
 			-- positions
 			local px0 = offset_x + (x    ) * scale
 			local px1 = offset_x + (x + 1) * scale
 			local py0 = offset_y + (y    ) * scale
 			local py1 = offset_y + (y + 1) * scale
 			
-			-- heightmap values
-			local x0 = (x    ) % res
-			local x1 = (x + 1) % res
-			local y0 = (y    ) * res
-			local y1 = (y + 1) * res
+			-- heightmap indices
+			local hx0 = (x    ) % res
+			local hx1 = (x + 1) % res
+			local hy0 = (y    ) * res
+			local hy1 = (y + 1) * res
 
-			-- heightmap lookup
-			local i00 = offset_z + metadata[x0 + y0 + 1]
-			local i10 = offset_z + metadata[x1 + y0 + 1]
-			local i01 = offset_z + metadata[x0 + y1 + 1]
-			local i11 = offset_z + metadata[x1 + y1 + 1]
+			-- heightmap positions
+			local p00 = offset_z + metadata[hx0 + hy0 + 1]
+			local p10 = offset_z + metadata[hx1 + hy0 + 1]
+			local p01 = offset_z + metadata[hx0 + hy1 + 1]
+			local p11 = offset_z + metadata[hx1 + hy1 + 1]
 			
 			-- uv coords (world space)
 			local u0 = -px0 / 1000
 			local u1 = -px1 / 1000
 			local v0 =  py0 / 1000
 			local v1 =  py1 / 1000
-			
-			mesh.Position(px0, py0, i00)
-			--mesh.Normal(normal)
-			mesh.TexCoord(0, u0, v0)
-			mesh.AdvanceVertex()
 
-			mesh.Position(px0, py1, i01)
-			--mesh.Normal(normal)
-			mesh.TexCoord(0, u0, v1)
-			mesh.AdvanceVertex()
-
-			mesh.Position(px1, py1, i11)
-			--mesh.Normal(normal)
-			mesh.TexCoord(0, u1, v1)
-			mesh.AdvanceVertex()
-
-			mesh.Position(px1, py0, i10)
-			--mesh.Normal(normal)
-			mesh.TexCoord(0, u1, v0)
-			mesh.AdvanceVertex()
+			if x % 2 == y % 2 then
+				vertex(px0, py0, p00, u0, v0)
+				vertex(px0, py1, p01, u0, v1)
+				vertex(px1, py1, p11, u1, v1)
+				vertex(px1, py0, p10, u1, v0)
+			else
+				vertex(px1, py0, p10, u1, v0)
+				vertex(px0, py0, p00, u0, v0)
+				vertex(px0, py1, p01, u0, v1)
+				vertex(px1, py1, p11, u1, v1)
+			end
 		end
 	end
 	mesh.End()
@@ -307,6 +310,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 
 		local offset = INFMAP.unlocalize(quadtree.pos, local_player_chunk - heightmap:GetChunk())
 		render.SetMaterial(Material("models/wireframe"))
+		--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
 		imesh_offset:SetTranslation(-offset)
 		offset:Add(eye_pos)
 		cam.PushModelMatrix(imesh_offset)
