@@ -14,37 +14,58 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "ReferenceParent")
 end
 
-function ENT:InitializePhysics(parent)
-	local phys = parent:GetPhysicsObject()
-	parent.INFMAP_PHYSOBJ = phys
+function ENT:InitializePhysics(parent_phys)
+	if !IsValid(parent_phys) then return end
 
-	if !phys:IsValid() then
-		if SERVER then 
-			SafeRemoveEntity(self)
-		else
+	parent.INFMAP_REFERENCE_PARENT_PHYSOBJ = parent_phys
+	if bit.band(parent:GetSolidFlags(), FSOLID_CUSTOMRAYTEST + FSOLID_CUSTOMBOXTEST) == 0 then -- EnableCustomCollisions == false
+		if SERVER then
 			self:PhysicsInit(SOLID_VPHYSICS)
 		end
-
-		return 
-	end
-	
-	local convexes = phys:GetMesh()
-	if !convexes then
-		if SERVER then 
-			SafeRemoveEntity(self) 
-		end
-
 		return
 	end
 
-	self:EnableCustomCollisions(true)
-	self:PhysicsFromMesh(convexes)
-
-	local phys = self:GetPhysicsObject()
-	if phys:IsValid() then
-		phys:EnableMotion(false)
+	local convexes = parent_phys:GetMesh()
+	if !convexes then 
+		if SERVER then 
+			SafeRemoveEntity(self) 
+		end 
+	else
+		self:PhysicsFromMesh(convexes)
+		self:EnableCustomCollisions(true)
 	end
 end
+
+function ENT:UpdatePhysics()
+	local self_phys = self:GetPhysicsObject()
+	if !IsValid(self_phys) then return end
+
+	-- update physics (if parent changed)
+	local parent_phys = self:GetReferenceParent():GetPhysicsObject()
+	if self.INFMAP_REFERENCE_PARENT_PHYSOBJ != parent_phys then
+		self:InitializePhysics(parent_phys)
+	end
+
+	-- update position
+	if SERVER then
+		local pos = INFMAP.unlocalize(parent:INFMAP_GetPos(), parent:GetChunk() - self:GetChunk())
+		if util.IsInWorld(pos) then
+			self_phys:INFMAP_SetPos(pos)
+			self_phys:SetAngles(parent:GetAngles())
+		else
+			SafeRemoveEntity(self)
+		end
+	elseif IsValid(parent_phys) then
+		self_phys:INFMAP_SetPos(self:INFMAP_GetPos())
+		self_phys:SetAngles(self:GetAngles())
+	end
+
+	-- update other info
+	self_phys:EnableMotion(false)
+	self:SetCollisionGroup(parent:GetCollisionGroup())
+	self:SetMoveType(parent:GetMoveType())
+end
+
 
 function ENT:Initialize()
 	local parent = self:GetReferenceParent()
@@ -52,44 +73,14 @@ function ENT:Initialize()
 	if CLIENT then return end
 	
 	self:SetModel(parent:GetModel())
-	self:SetCollisionGroup(parent:GetCollisionGroup())
 	self:SetSolid(SOLID_VPHYSICS)
-	self:SetMoveType(MOVETYPE_VPHYSICS)
-	self:SetNoDraw(true)	-- TODO: Does this break the client?
+	self:SetNoDraw(true) -- TODO: Does this break the client?
+
+	parent:DeleteOnRemove(self)
+	self:UpdatePhysics()
 end
 
-function ENT:Think()
-	local parent = self:GetReferenceParent()
-	if !IsValid(parent) then
-		if SERVER then 
-			SafeRemoveEntity(self)
-		end
-		
-		return
-	end
-
-	local self_phys = self:GetPhysicsObject()
-	local parent_phys = parent:GetPhysicsObject()
-	local self_phys_valid = self_phys:IsValid()
-	local parent_phys_valid = parent_phys:IsValid()
-
-	if !self_phys_valid or (parent_phys_valid and parent_phys != parent.INFMAP_PHYSOBJ) then
-		self:InitializePhysics(parent)
-	end
-
-	local pos = INFMAP.unlocalize(parent:INFMAP_GetPos(), parent:GetChunk() - self:GetChunk())
-	local ang = parent:GetAngles()
-	if SERVER then
-		self:INFMAP_SetPos(pos)
-		self:SetAngles(ang)
-	elseif self_phys_valid then
-		self_phys:INFMAP_SetPos(pos)
-		self_phys:SetAngles(ang)
-		self_phys:EnableMotion(false)
-	end
-	
-	--debugoverlay.BoxAngles(self:INFMAP_GetPos(), self:OBBMins(), self:OBBMaxs(), self:GetAngles(), 0.1, Color(255, 127, 0, 0))
-end
+ENT.Think = ENT.UpdatePhysics
 
 hook.Add("PhysgunPickup", "infmap_clone_disablepickup", function(_, ent)
 	if ent:GetClass() == "infmap_clone" then

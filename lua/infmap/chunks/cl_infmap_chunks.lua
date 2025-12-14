@@ -206,6 +206,10 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 		)
 	end
 
+	for _, heightmap in ipairs(ents.FindByClass("infmap_heightmap_collider")) do
+		render.DrawWireframeBox(heightmap:GetPos(), Angle(), heightmap:OBBMins(), heightmap:OBBMaxs(), Color(255, 127, 0), true)
+	end
+
 	cam.Start2D()
 		draw.DrawText("client chunk: " .. concat_vector(lp.INFMAP_CHUNK), "TargetID", nil, 130)
 		draw.DrawText("client pos: " .. concat_vector(lp:INFMAP_GetPos()), "TargetID", nil, 150)

@@ -1,66 +1,3 @@
----------------------------
--- CROSS-CHUNK COLLISION --
----------------------------
--- collision with props crossing through chunk bounderies
-local function update_cross_chunk_collision(ent, disable)
-	do return end
-	if INFMAP.filter_collision(ent) or INFMAP.in_chunk(ent:INFMAP_GetPos(), INFMAP.chunk_size - ent:BoundingRadius()) then
-		-- outside of area for cloning to happen (or invalidated), remove all clones
-		if ent.INFMAP_CLONES then
-			for _, e in pairs(ent.INFMAP_CLONES) do
-				SafeRemoveEntity(e)
-			end
-			ent.INFMAP_CLONES = nil
-		end
-
-		return
-	end
-
-	ent.INFMAP_CLONES = ent.INFMAP_CLONES or {}
-
-	local i = 0
-	local aabb_min, aabb_max = ent:INFMAP_WorldSpaceAABB()
-	local chunk_size = Vector(INFMAP.chunk_size, INFMAP.chunk_size, INFMAP.chunk_size)
-	for z = -1, 1 do 
-		for y = -1, 1 do 
-			for x = -1, 1 do
-				-- never clone in the same chunk the object is already in
-				if x == 0 and y == 0 and z == 0 then continue end
-
-				i = i + 1
-
-				-- if in chunk next to it, clone
-				local chunk_offset = INFMAP.Vector(x, y, z)
-				local chunk_max = INFMAP.unlocalize(INFMAP.chunk_origin, chunk_offset)
-				local chunk_min = chunk_max - chunk_size
-				chunk_max:Add(chunk_size)
-
-				if INFMAP.aabb_intersect_aabb(aabb_min, aabb_max, chunk_min, chunk_max) then
-					-- dont clone 2 times
-					local stored = ent.INFMAP_CLONES[i]
-					local offset = ent:GetChunk() + chunk_offset
-
-					if IsValid(stored) then
-						stored:SetChunk(offset)
-					else
-						local clone = ents.Create("infmap_clone")
-						clone:SetReferenceParent(ent)
-						clone:SetChunk(offset)
-						clone:Spawn()
-						ent.INFMAP_CLONES[i] = clone
-					end
-				else
-					if !IsValid(ent.INFMAP_CLONES[i]) then continue end
-
-					-- remove cloned object if its moved out of chunk
-					SafeRemoveEntity(ent.INFMAP_CLONES[i])
-					ent.INFMAP_CLONES[i] = nil
-				end
-			end 
-		end 
-	end
-end
-
 ---------------------
 -- ENTITY WRAPPING --
 ---------------------
@@ -202,7 +139,7 @@ function ENTITY:SetChunk(chunk)
 	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(chunk))
 	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
-	--update_cross_chunk_collision(self) -- delete clones
+	--INFMAP.update_cross_chunk_collision(self)
 	check_ent(self)
 
 	-- parent support (recursive)

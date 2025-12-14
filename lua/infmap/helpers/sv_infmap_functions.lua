@@ -83,3 +83,46 @@ function INFMAP.validate_constraints(ent, prev)
 		end
 	end
 end
+
+-- collision with props crossing through chunk bounderies
+function INFMAP.update_cross_chunk_collision(ent)
+	if INFMAP.filter_collision(ent) or INFMAP.in_chunk(ent:INFMAP_GetPos(), INFMAP.chunk_size - ent:BoundingRadius()) then
+		-- outside of area for cloning to happen (or invalidated), remove all clones
+		if ent.INFMAP_CLONES then
+			for _, e in pairs(ent.INFMAP_CLONES) do
+				SafeRemoveEntity(e)
+			end
+			ent.INFMAP_CLONES = nil
+		end
+
+		return
+	end
+
+	ent.INFMAP_CLONES = ent.INFMAP_CLONES or {}
+	
+	local aabb_min, aabb_max = ent:INFMAP_WorldSpaceAABB()
+	local chunk = ent:GetChunk()
+	local _, chunk_min = INFMAP.localize(aabb_min) chunk_min:Add(chunk)
+	local _, chunk_max = INFMAP.localize(aabb_max) chunk_max:Add(chunk)
+	for z = chunk_min[3], chunk_max[3] do
+		for y = chunk_min[2], chunk_max[2] do
+			for x = chunk_min[1], chunk_max[1] do
+				local chunk_offset = INFMAP.Vector(x, y, z)
+				if chunk_offset == chunk then continue end -- never self-clone
+			
+				-- dont clone 2 times
+				local i = INFMAP.encode_vector(chunk_offset)
+				local stored = ent.INFMAP_CLONES[i]
+				if IsValid(stored) then
+					stored:SetChunk(chunk_offset)
+				else
+					local clone = ents.Create("infmap_clone")
+					clone:SetReferenceParent(ent)
+					clone:SetChunk(chunk_offset)
+					clone:Spawn()
+					ent.INFMAP_CLONES[i] = clone
+				end
+			end
+		end 
+	end
+end

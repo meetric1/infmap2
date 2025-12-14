@@ -57,9 +57,9 @@ function ENT:Initialize()
 	end
 end
 
-------------
--- SERVER --
-------------
+------------------
+-- SERVER LOGIC --
+------------------
 if SERVER then
 	require("imagereader")
 	util.AddNetworkString("INFMAP_HEIGHTMAP")
@@ -93,46 +93,100 @@ if SERVER then
 		end
 	}})
 
-	timer.Create("INFMAP_HEIGHTMAP", 0.5, 0, function()
+	local RESOLUTION = 8
+	local function validate_tree(heightmap, tree)
+		if tree.validated then return end
+		tree.validated = {}
+
+		local metadata = {}
+		local sampler = heightmap.INFMAP_HEIGHTMAP_SAMPLER
+		local inv_res = tree.size / RESOLUTION
+		local inv_size = 1 / heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
+		local min, max = 2^16-1, 0
+		for y = 0, RESOLUTION do
+			for x = 0, RESOLUTION do
+				local sample = sampler:Get(
+					(tree.pos[1] + x * inv_res) * inv_size, 
+					(tree.pos[2] + y * inv_res) * inv_size,
+					false
+				)
+
+				min, max = math.min(min, sample), math.max(max, sample)
+				table.insert(metadata, sample)
+			end
+		end
+		metadata.min = min
+		metadata.max = max
+		tree.metadata = metadata
+
+		-- collision
+		if #tree.path == 9 then
+			local _, chunk_min = INFMAP.localize(Vector(0, 0, tree.metadata.min))
+			local _, chunk_max = INFMAP.localize(Vector(0, 0, tree.metadata.max))
+			local pos, chunk_offset = INFMAP.localize(tree.pos)
+			chunk_offset = chunk_offset + heightmap:GetChunk()
+
+			tree.colliders = {}
+			for z = chunk_min[3], chunk_max[3] do
+				local collider = ents.Create("infmap_heightmap_collider")
+				collider:SetHeightmap(heightmap)
+				collider:SetPath(tree.path)
+				collider:SetChunk(chunk_offset + INFMAP.Vector(0, 0, z))
+				collider:INFMAP_SetPos(pos)
+				collider:Spawn()
+				table.insert(tree.colliders, collider)
+			end
+		end
+	end
+
+	timer.Create("INFMAP_HEIGHTMAP", 0.25, 0, function()
 		local s = SysTime()
 
 		for _, ply in player.Iterator() do
 			local ply_chunk = get_chunk(ply)
 			if !ply_chunk then continue end
 
-			local eye_pos = ply:INFMAP_EyePos()
+			local pos = ply:INFMAP_GetPos()
 			for _, heightmap in ipairs(heightmaps) do
-				local offset = INFMAP.unlocalize(eye_pos, ply_chunk - heightmap:GetChunk())
+				local offset = INFMAP.unlocalize(pos, ply_chunk - heightmap:GetChunk())
 				get_quadtree(heightmap):traverse(function(tree)
-					tree.validated = tree.validated or {}
+					validate_tree(heightmap, tree)
+
+					-- networking
 					if !tree.validated[ply] then
 						tree.validated[ply] = true
-						queue:insert({ply, heightmap, tree, false})
+						queue:insert({ply, heightmap, tree, tree.metadata})
 						return true -- stop recursion
 					end
 
-					if tree:should_split_pos(offset, 2) then
-						tree.curtime = CurTime() -- used for garbage collection
-						tree:split() -- continue recursion
-					else
-						-- tree hasn't been visited in a while, invalidate it
-						if tree.curtime and tree.curtime + 1 < CurTime() and tree.children then
-							for p, _ in pairs(tree.validated) do
-								queue:insert({ply, heightmap, tree, true})
-							end
-							
-							tree.children = nil
-						end
-						return true
+					if tree:should_split_pos(offset) then
+						tree.curtime = CurTime()
+						tree:split()
+						return -- continue recursion
 					end
+
+					-- tree hasn't been visited in a while, invalidate it
+					if tree.curtime and tree.curtime + 1 < CurTime() then
+						for p, _ in pairs(tree.validated) do
+							queue:insert({ply, heightmap, tree, nil})
+						end
+						
+						tree:traverse(function(self)
+							if !self.colliders then return end
+							for k, v in ipairs(self.colliders) do 
+								SafeRemoveEntity(v) 
+							end
+						end)
+						tree.children = nil
+						tree.curtime = nil
+					end
+
+					return true
 				end)
 			end
 		end
-		
-		print("parse took " .. (SysTime() - s) * 1000 .. " ms")
 	end)
 
-	local RESOLUTION = 16
 	hook.Add("Think", "infmap_heightmap", function()
 		local i = 0
 		while !queue:is_empty() do
@@ -141,22 +195,13 @@ if SERVER then
 
 			-- REPLACE WITH XALPHOX NETWORKING
 			local data = queue:remove()
-			local ply, heightmap, tree, free = data[1], data[2], data[3], data[4]
+			local ply, heightmap, tree, metadata = data[1], data[2], data[3], data[4]
 			net.Start("INFMAP_HEIGHTMAP")
 				net.WriteEntity(heightmap)
 				net.WriteString(tree.path)
-
-				if !free then
-					local mult = tree.size / RESOLUTION
-					local inv_res = 1 / heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
-					for y = 0, RESOLUTION do
-						for x = 0, RESOLUTION do
-							net.WriteUInt(heightmap.INFMAP_HEIGHTMAP_SAMPLER:Get(
-								(tree.pos[1] + x * mult) * inv_res, 
-								(tree.pos[2] + y * mult) * inv_res,
-								false
-							), 16)
-						end
+				if metadata then
+					for _, sample in ipairs(metadata) do
+						net.WriteUInt(sample, 16)
 					end
 				end
 			net.Send(ply)
@@ -166,19 +211,19 @@ if SERVER then
 	return
 end
 
-------------
--- CLIENT --
-------------
-local function generate_tree(tree, metadata)
-	local res = math.sqrt(#metadata)
-	assert(res == math.floor(res))
+------------------
+-- CLIENT LOGIC --
+------------------
+local function generate_tree(heightmap, tree)
+	local metadata = tree.metadata
+	local res = math.sqrt(#metadata) 
+	assert(res == math.floor(res)) 
 	assert(res <= 91)
 
 	local res_1 = res - 1
-	local res_2 = res_1 - 1
 	local scale = tree.size / res_1
+	local inv_uv_size = 1 / 1000--heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
 	local offset_x, offset_y, offset_z = tree.pos[1], tree.pos[2], tree.pos[3]
-
 	local function vertex(x, y, z, u, v)
 		mesh.Position(x, y, z)
 		--mesh.Normal(normal)
@@ -186,13 +231,10 @@ local function generate_tree(tree, metadata)
 		mesh.AdvanceVertex()
 	end
 
-	local quads = (res_1 * res_1)
-	assert(quads <= 8192)
-
-	local imesh = Mesh()
-	mesh.Begin(imesh, MATERIAL_QUADS, quads)
-	for y = 0, res_2 do
-		for x = 0, res_2 do
+	tree.imesh = Mesh()
+	mesh.Begin(tree.imesh, MATERIAL_QUADS, res_1 * res_1)
+	for y = 0, res_1 - 1 do
+		for x = 0, res_1 - 1 do
 			-- positions
 			local px0 = offset_x + (x    ) * scale
 			local px1 = offset_x + (x + 1) * scale
@@ -212,10 +254,10 @@ local function generate_tree(tree, metadata)
 			local p11 = offset_z + metadata[hx1 + hy1 + 1]
 			
 			-- uv coords (world space)
-			local u0 = -px0 / 1000
-			local u1 = -px1 / 1000
-			local v0 =  py0 / 1000
-			local v1 =  py1 / 1000
+			local u0 =  px0 * inv_uv_size
+			local u1 =  px1 * inv_uv_size
+			local v0 = -py0 * inv_uv_size
+			local v1 = -py1 * inv_uv_size
 
 			if x % 2 == y % 2 then
 				vertex(px0, py0, p00, u0, v0)
@@ -231,8 +273,6 @@ local function generate_tree(tree, metadata)
 		end
 	end
 	mesh.End()
-
-	return imesh
 end
 
 -- received
@@ -241,7 +281,7 @@ net.Receive("INFMAP_HEIGHTMAP", function(len, ply)
 	local path = net.ReadString()
 	len = len - (#path + 1) * 8 - 13
 
-	local tree = get_quadtree(heightmap):traverse_path(path)
+	local tree = get_quadtree(heightmap):traverse_path(path, true)
 	if len <= 0 then
 		print("received invalid tree " .. path .. ".. discarding..")
 		tree.children = nil
@@ -249,14 +289,20 @@ net.Receive("INFMAP_HEIGHTMAP", function(len, ply)
 	end
 
 	local metadata = {}
+	local min, max = 2^16-1, 0
 	while len > 0 do
-		table.insert(metadata, net.ReadUInt(16))
+		local sample = net.ReadUInt(16)
 		len = len - 16
+		min, max = math.min(min, sample), math.max(max, sample)
+		table.insert(metadata, sample)
 	end
+	metadata.min = min
+	metadata.max = max
+	tree.metadata = metadata
 
-	local systime = SysTime()
-	tree.imesh = generate_tree(tree, metadata)
-	print("mesh generation with " .. #metadata .. " points took " .. (SysTime() - systime) * 1000 .. "ms")
+	local s = SysTime()
+	generate_tree(heightmap, tree)
+	print("mesh generation with " .. #metadata .. " points took " .. (SysTime() - s) * 1000 .. "ms")
 end)
 
 local function traverse_render(tree, pos)
@@ -266,8 +312,7 @@ local function traverse_render(tree, pos)
 		return
 	end
 
-	if !tree:should_split_pos(pos, 2) then
-		--tree.children = nil
+	if !tree:should_split_pos(pos) then
 		tree.imesh:Draw()
 		return
 	end
@@ -282,18 +327,6 @@ local function traverse_render(tree, pos)
 	for i = 1, 4 do
 		traverse_render(children[i], pos)
 	end
-
-	--[[
-	local children = tree.children
-	if !children then
-		if tree.imesh then
-			tree.imesh:Draw()
-		end
-	else
-		for i = 1, 4 do
-			traverse_render(children[i], pos)
-		end
-	end]]
 end
 
 -- rendering
