@@ -20,8 +20,9 @@ function ENT:InitializePhysics()
 	local heightmap = self:GetHeightmap()
 	assert(IsValid(heightmap))
 
+	-- tree may exist (it got split from node networked in previous frame), but metadata has not networked yet
 	local tree = heightmap.INFMAP_HEIGHTMAP_QUADTREE:traverse_path(self:GetPath())
-	if !tree then return end
+	if !tree or !tree.metadata then return false end
 
 	local s = SysTime()
 
@@ -82,9 +83,13 @@ function ENT:InitializePhysics()
 	self:PhysicsFromMesh(triangles)
 	self:EnableCustomCollisions(true)
 	self:GetPhysicsObject():EnableMotion(false)
+	self:AddEFlags(EFL_NO_THINK_FUNCTION)
+
+	if SERVER then
+		INFMAP.update_cross_chunk_collision(self)
+	end
 	
 	print("physmesh generation with " .. #vertices .. " points took " .. (SysTime() - s) * 1000 .. "ms")
-
 
 	--[[
 	if SERVER then
@@ -95,31 +100,32 @@ function ENT:InitializePhysics()
 			debugoverlay.Triangle(p1, p2, p3, 10, Color(0, 255, 255, 100))
 		end
 	end]]
+
+	return true
 end
+
+local queue = INFMAP.Queue()
+hook.Add("Think", "infmap_heightmap_queue", function()
+	local ent = queue:remove()
+	if !IsValid(ent) then return end
+
+	if !ent:InitializePhysics() then
+		queue:insert(ent)
+	end
+end)
 
 function ENT:Initialize()
+	queue:insert(self) -- scatter generation time
 	self:SetNoDraw(true)
+	
 	if CLIENT then return end
 
-	self:SetModel("models/hunter/blocks/cube025x025x025.mdl")
+	self:SetModel("models/props_c17/FurnitureCouch002a.mdl")
 	self:SetSolid(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_NONE)
-	self:InitializePhysics()
 end
 
-if CLIENT then
-	function ENT:Think()
-		if !IsValid(self:GetPhysicsObject()) then
-			self:InitializePhysics()
-		end
-
-		-- scatter generation time
-		self:SetNextClientThink(CurTime() + 0.5 + math.random() * 0.5)
-		return true
-	end
-end
-
-hook.Add("PhysgunPickup", "infmap_clone_disablepickup", function(_, ent)
+hook.Add("PhysgunPickup", "infmap_heightmap_disablepickup", function(_, ent)
 	if ent:GetClass() == "infmap_heightmap_collider" then
 		return false 
 	end

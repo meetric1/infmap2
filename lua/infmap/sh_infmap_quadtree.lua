@@ -3,7 +3,7 @@ local QUADTREE_FUNCS = {
 		if #self.path >= 9 then return false end
 		--if self.size > 2000 then return true end
 
-		local wiggle = self.size * (extra or 2) -- split wiggle room
+		local wiggle = self.size * (extra or 1) -- split wiggle room
 
 		--local wiggle = math.min(self.size + (self.pos[3] - pos[3] + 1000), self.size)
 		local diff_x = pos[1] - self.pos[1]
@@ -34,10 +34,10 @@ local QUADTREE_FUNCS = {
 		local size = self.size / 2
 		local x, y, z = self.pos[1], self.pos[2], self.pos[3]
 		self.children = {
-			INFMAP.Quadtree({x,               y, z}, size, self.path .. "1"),
-			INFMAP.Quadtree({x + size,        y, z}, size, self.path .. "2"),
-			INFMAP.Quadtree({x,        y + size, z}, size, self.path .. "3"),
-			INFMAP.Quadtree({x + size, y + size, z}, size, self.path .. "4")
+			INFMAP.Quadtree(Vector(x,               y, z), size, self.path .. "1"),
+			INFMAP.Quadtree(Vector(x + size,        y, z), size, self.path .. "2"),
+			INFMAP.Quadtree(Vector(x,        y + size, z), size, self.path .. "3"),
+			INFMAP.Quadtree(Vector(x + size, y + size, z), size, self.path .. "4")
 		}
 	end,
 	["traverse_path"] = function(self, path, split)
@@ -62,8 +62,8 @@ local QUADTREE = {
 
 function INFMAP.Quadtree(pos, size, path)
 	return setmetatable({
-		pos = {pos[1], pos[2], pos[3]}, 
-		size = size, 
-		path = path or ""
+		["pos"] = pos, 
+		["size"] = size, 
+		["path"] = path or ""
 	}, QUADTREE)
 end

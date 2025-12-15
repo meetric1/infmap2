@@ -102,8 +102,10 @@ function INFMAP.update_cross_chunk_collision(ent)
 	
 	local aabb_min, aabb_max = ent:INFMAP_WorldSpaceAABB()
 	local chunk = ent:GetChunk()
-	local _, chunk_min = INFMAP.localize(aabb_min) chunk_min:Add(chunk)
-	local _, chunk_max = INFMAP.localize(aabb_max) chunk_max:Add(chunk)
+	local _, chunk_min = INFMAP.localize(aabb_min)
+	local _, chunk_max = INFMAP.localize(aabb_max)
+	chunk_min = chunk_min + chunk
+	chunk_max = chunk_max + chunk
 	for z = chunk_min[3], chunk_max[3] do
 		for y = chunk_min[2], chunk_max[2] do
 			for x = chunk_min[1], chunk_max[1] do
