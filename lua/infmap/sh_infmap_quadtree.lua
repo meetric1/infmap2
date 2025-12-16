@@ -34,10 +34,10 @@ local QUADTREE_FUNCS = {
 		local size = self.size / 2
 		local x, y, z = self.pos[1], self.pos[2], self.pos[3]
 		self.children = {
-			INFMAP.Quadtree(Vector(x,               y, z), size, self.path .. "1"),
-			INFMAP.Quadtree(Vector(x + size,        y, z), size, self.path .. "2"),
-			INFMAP.Quadtree(Vector(x,        y + size, z), size, self.path .. "3"),
-			INFMAP.Quadtree(Vector(x + size, y + size, z), size, self.path .. "4")
+			INFMAP.Quadtree({x,               y, z}, size, self.path .. "1"),
+			INFMAP.Quadtree({x + size,        y, z}, size, self.path .. "2"),
+			INFMAP.Quadtree({x,        y + size, z}, size, self.path .. "3"),
+			INFMAP.Quadtree({x + size, y + size, z}, size, self.path .. "4")
 		}
 	end,
 	["traverse_path"] = function(self, path, split)
@@ -62,7 +62,7 @@ local QUADTREE = {
 
 function INFMAP.Quadtree(pos, size, path)
 	return setmetatable({
-		["pos"] = pos, 
+		["pos"] = {pos[1], pos[2], pos[3]}, 
 		["size"] = size, 
 		["path"] = path or ""
 	}, QUADTREE)

@@ -76,11 +76,11 @@ if SERVER then
 		local min, max = 2^16-1, 0
 		for y = 0, RESOLUTION do
 			for x = 0, RESOLUTION do
-				local sample = sampler:Get(
+				local sample = math.Round(sampler:Get(
 					(tree.pos[1] + x * inv_res) * inv_size, 
 					(tree.pos[2] + y * inv_res) * inv_size,
 					false
-				)
+				))
 
 				min, max = math.min(min, sample), math.max(max, sample)
 				table.insert(metadata, sample)
@@ -98,6 +98,10 @@ if SERVER then
 			local ply_chunk = get_chunk(ply)
 			if !ply_chunk then continue end
 
+			-- TODO:
+				-- WHY is the SERVER validating CLIENT VISUALS???
+				-- let the fucking CLIENT build visuals.. ONLY THING THE SERVER SHOULD WORRY ABOUT IS COLLISION
+				-- this is some shitass fucking code!! come on man!!!!
 			ply.INFMAP_QUEUE = ply.INFMAP_QUEUE or INFMAP.Queue()
 			local pos = ply:INFMAP_GetPos()
 			for _, heightmap in ipairs(heightmaps) do
@@ -163,6 +167,8 @@ if SERVER then
 				end)
 			end
 		end
+
+		print("heightmaps parsed in " .. (SysTime() - s) * 1000 .. "ms")
 	end)
 
 	hook.Add("Think", "infmap_heightmap", function()
@@ -338,7 +344,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 		render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
 		imesh_offset:SetTranslation(-offset)
 		offset:Add(eye_pos)
-		local s = SysTime()
+
 		cam.PushModelMatrix(imesh_offset)
 			traverse_render(quadtree, offset)
 		cam.PopModelMatrix()

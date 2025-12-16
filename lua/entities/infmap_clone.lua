@@ -17,8 +17,6 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "ReferenceParent")
 end
 
-if CLIENT then return end -- later..
-
 -- EnableCustomCollisions == true
 local function custom_collisions_enabled(ent)
 	return bit.band(ent:GetSolidFlags(), FSOLID_CUSTOMRAYTEST + FSOLID_CUSTOMBOXTEST) != 0
@@ -32,7 +30,7 @@ function ENT:InitializePhysics(parent)
 	if IsValid(parent_phys_old) and parent_phys_old == parent_phys then return end
 	
 	-- time to revalidate..
-	if custom_collisions_enabled(parent) then
+	if CLIENT or custom_collisions_enabled(parent) then
 		local convexes = parent_phys:GetMesh()
 		if convexes then
 			self:PhysicsFromMesh(convexes)
@@ -74,13 +72,22 @@ function ENT:UpdatePhysics()
 end
 
 function ENT:Initialize()
+	if CLIENT then return end
+	
 	local parent = self:GetReferenceParent()
 	self:SetModel(parent:GetModel())
 	self:SetNoDraw(true)
 	parent:DeleteOnRemove(self)
 end
 
-ENT.Think = ENT.UpdatePhysics
+function ENT:Think()
+	self:UpdatePhysics()
+	
+	if CLIENT then -- less updates.. not per frame
+		self:SetNextClientThink(CurTime() + 1 / 4)
+		return true
+	end
+end
 
 hook.Add("PhysgunPickup", "infmap_clone_disablepickup", function(_, ent)
 	if ent:GetClass() == "infmap_clone" then
