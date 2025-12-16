@@ -45,10 +45,7 @@ end
 
 function ENT:UpdatePhysics()
 	local parent = self:GetReferenceParent()
-	if !IsValid(parent) then
-		self:Remove()
-		return 
-	end
+	if !IsValid(parent) then return end
 
 	self:SetSolid(parent:GetSolid())
 	self:SetCollisionGroup(parent:GetCollisionGroup())
@@ -64,7 +61,7 @@ function ENT:UpdatePhysics()
 		local pos = INFMAP.unlocalize(parent:INFMAP_GetPos(), parent:GetChunk() - self:GetChunk())
 		self:INFMAP_SetPos(pos)
 		self:SetAngles(parent:GetAngles())
-		--debugoverlay.Box(pos, self:OBBMins(), self:OBBMaxs())
+		debugoverlay.Box(pos, self:OBBMins(), self:OBBMaxs())
 	else
 		self_phys:INFMAP_SetPos(self:INFMAP_GetPos())
 		self_phys:SetAngles(self:GetAngles())
@@ -73,7 +70,7 @@ end
 
 function ENT:Initialize()
 	if CLIENT then return end
-	
+
 	local parent = self:GetReferenceParent()
 	self:SetModel(parent:GetModel())
 	self:SetNoDraw(true)

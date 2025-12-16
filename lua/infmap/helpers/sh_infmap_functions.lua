@@ -87,9 +87,9 @@ function INFMAP.in_chunk(pos, size)
 	local z = pos[3] - chunk_origin[3]
 
 	return (
-		x > -chunk_size and x < chunk_size and 
-		y > -chunk_size and y < chunk_size and 
-		z > -chunk_size and z < chunk_size
+		x >= -chunk_size and x <= chunk_size and 
+		y >= -chunk_size and y <= chunk_size and 
+		z >= -chunk_size and z <= chunk_size
 	)
 end
 

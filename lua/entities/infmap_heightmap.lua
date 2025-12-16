@@ -41,7 +41,7 @@ end
 function ENT:KeyValue(key, value)
 	if key == "path" then
 		--value = "materials/" .. value
-		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read("materials/high_bits.png", "GAME"))--ImageReader(file.Read(value, "GAME")) -- defined in imagereader.dll
+		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read("materials/Wolf_Run_Height_Map_8192x8192_0_0.png", "GAME"))--ImageReader(file.Read(value, "GAME")) -- defined in imagereader.dll
 	elseif key == "origin" then
 		self:SetChunk(INFMAP.Vector(0, 0, 0))
 	end
@@ -214,7 +214,7 @@ local function generate_tree(heightmap, tree)
 
 	local res_1 = res - 1
 	local scale = tree.size / res_1
-	local inv_uv_size = 1 / 1000--heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
+	local inv_uv_size = 1 / heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
 	local offset_x, offset_y, offset_z = tree.pos[1], tree.pos[2], tree.pos[3]
 	local function vertex(x, y, z, u, v)
 		mesh.Position(x, y, z)
@@ -341,12 +341,15 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 
 		local offset = INFMAP.unlocalize(quadtree.pos, local_player_chunk - heightmap:GetChunk())
 		--render.SetMaterial(Material("models/wireframe"))
-		render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
+		--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
+		render.SetMaterial(Material("sstrp25/heightmaps/wolf_run"))
 		imesh_offset:SetTranslation(-offset)
 		offset:Add(eye_pos)
 
 		cam.PushModelMatrix(imesh_offset)
+			render.OverrideDepthEnable(true, true)
 			traverse_render(quadtree, offset)
+			render.OverrideDepthEnable(false, false)
 		cam.PopModelMatrix()
 	end
 end)
