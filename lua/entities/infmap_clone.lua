@@ -61,7 +61,7 @@ function ENT:UpdatePhysics()
 		local pos = INFMAP.unlocalize(parent:INFMAP_GetPos(), parent:GetChunk() - self:GetChunk())
 		self:INFMAP_SetPos(pos)
 		self:SetAngles(parent:GetAngles())
-		debugoverlay.Box(pos, self:OBBMins(), self:OBBMaxs())
+		--debugoverlay.Box(pos, self:OBBMins(), self:OBBMaxs(), 1, Color(255, 255, 255, 255))
 	else
 		self_phys:INFMAP_SetPos(self:INFMAP_GetPos())
 		self_phys:SetAngles(self:GetAngles())
