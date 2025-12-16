@@ -152,7 +152,7 @@ hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
 -----------
 -- (abhorrent code.. remove when we don't need it anymore)
 local debug_enabled = CreateClientConVar("infmap_debug", "0", true, false)
-local maxsize = Vector(1, 1, 1) * 2^14
+local maxsize = Vector(2^14, 2^14, 2^14)
 local function concat_vector(v)
 	if !v then return "nil" end
 

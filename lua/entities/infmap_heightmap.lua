@@ -76,11 +76,11 @@ if SERVER then
 		local min, max = 2^16-1, 0
 		for y = 0, RESOLUTION do
 			for x = 0, RESOLUTION do
-				local sample = math.floor(sampler:Get(
+				local sample = sampler:Get(
 					(tree.pos[1] + x * inv_res) * inv_size, 
 					(tree.pos[2] + y * inv_res) * inv_size,
 					false
-				)) -- 0:65535
+				)
 
 				min, max = math.min(min, sample), math.max(max, sample)
 				table.insert(metadata, sample)
