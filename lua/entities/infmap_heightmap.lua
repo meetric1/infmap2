@@ -8,12 +8,13 @@ if !INFMAP then return end
 local function get_chunk(ply)
 	local ply_chunk = ply:GetChunk()
 	if ply_chunk then 
-		return ply_chunk 
+		return ply_chunk, vector_origin
 	end
 
 	local vbsp = ply:GetNWEntity("INFMAP_VBSP")
 	if IsValid(vbsp) then
-		return vbsp:GetChunk()
+		local offset = INFMAP.chunk_origin - vbsp:GetVBSPPos()
+		return vbsp:GetChunk(), offset
 	else
 		return nil -- where the fuck are we..??
 	end
@@ -218,7 +219,7 @@ local function generate_tree(heightmap, tree)
 	local offset_x, offset_y, offset_z = tree.pos[1], tree.pos[2], tree.pos[3]
 	local function vertex(x, y, z, u, v)
 		mesh.Position(x, y, z)
-		--mesh.Normal(normal)
+		mesh.Normal(0, 0, 1)
 		mesh.TexCoord(0, u, v)
 		mesh.AdvanceVertex()
 	end
@@ -331,7 +332,7 @@ end
 local imesh_offset = Matrix()
 hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 	local local_player = LocalPlayer()
-	local local_player_chunk = get_chunk(local_player)
+	local local_player_chunk, vbsp_offset = get_chunk(local_player)
 	if !local_player_chunk then return end
 
 	local eye_pos = local_player:EyePos()
@@ -340,15 +341,24 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 		if !quadtree or !quadtree.imesh then continue end
 
 		local offset = INFMAP.unlocalize(quadtree.pos, local_player_chunk - heightmap:GetChunk())
+		offset:Add(vbsp_offset)
+
 		--render.SetMaterial(Material("models/wireframe"))
 		--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
-		render.SetMaterial(Material("sstrp25/heightmaps/wolf_run"))
 		imesh_offset:SetTranslation(-offset)
 		offset:Add(eye_pos)
 
 		cam.PushModelMatrix(imesh_offset)
 			render.OverrideDepthEnable(true, true)
+
+			render.SetMaterial(Material("sstrp25/heightmaps/wolf_run"))
 			traverse_render(quadtree, offset)
+
+			render.SetMaterial(Material("models/debug/debugwhite"))
+			render.RenderFlashlights(function()
+				traverse_render(quadtree, offset)
+			end)
+
 			render.OverrideDepthEnable(false, false)
 		cam.PopModelMatrix()
 	end

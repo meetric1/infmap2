@@ -56,9 +56,6 @@ hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
 	if !IsValid(vbsp) then return end
 	
 	local origin = INFMAP.chunk_origin
-	local size = INFMAP.chunk_size 
-	size = Vector(size, size, size)
-
 	cam.Start3D(EyePos() - vbsp:GetVBSPPos() + origin)
 	for ent, _ in pairs(vbsp.INFMAP_VBSP_CHECK) do
 		if INFMAP.filter_render(ent) or !ent:InChunk(vbsp) then continue end
