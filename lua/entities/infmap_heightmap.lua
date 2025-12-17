@@ -96,7 +96,7 @@ if SERVER then
 		local s = SysTime()
 
 		for _, ply in player.Iterator() do
-			local ply_chunk = get_chunk(ply)
+			local ply_chunk, ply_offset = get_chunk(ply)
 			if !ply_chunk then continue end
 
 			-- TODO:
@@ -107,6 +107,7 @@ if SERVER then
 			local pos = ply:INFMAP_GetPos()
 			for _, heightmap in ipairs(heightmaps) do
 				local offset = INFMAP.unlocalize(pos, ply_chunk - heightmap:GetChunk())
+				offset:Add(ply_offset)
 				get_quadtree(heightmap):traverse(function(tree)
 					validate_tree(heightmap, tree)
 
