@@ -1,6 +1,6 @@
-[submodule "image_reader/gmod-module-base"]
-	path = image_reader/gmod-module-base
+[submodule "image_reader/libs/gmod-module-base"]
+	path = image_reader/libs/gmod-module-base
 	url = https://github.com/Facepunch/gmod-module-base
-[submodule "image_reader/stb"]
-	path = image_reader/stb
+[submodule "image_reader/libs/stb"]
+	path = image_reader/libs/stb
 	url = https://github.com/nothings/stb
