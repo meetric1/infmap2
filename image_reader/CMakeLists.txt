@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 4.0)
 set(PROJECT_NAME imagereader)
 project(${PROJECT_NAME})
 
-set(CMAKE_CONFIGURATION_TYPES Release Debug)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CONFIGURATION_TYPES Release Debug)
 
 add_subdirectory(libs/gmod-module-base/include)
 

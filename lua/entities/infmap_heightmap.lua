@@ -40,8 +40,8 @@ end
 
 function ENT:KeyValue(key, value)
 	if key == "path" then
-		--value = "materials/" .. value
-		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read("materials/Wolf_Run_Height_Map_8192x8192_0_0.png", "GAME"))--ImageReader(file.Read(value, "GAME")) -- defined in imagereader.dll
+		value = "materials/" .. value
+		self.INFMAP_HEIGHTMAP_SAMPLER = ImageReader(file.Read(value, "GAME")) -- defined in imagereader.dll
 	elseif key == "origin" then
 		self:SetChunk(INFMAP.Vector(0, 0, 0))
 	end
