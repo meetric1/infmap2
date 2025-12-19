@@ -130,11 +130,15 @@ end
 ---------
 -- NET --
 ---------
+local function network_var_invalid(ent)
+	return !IsValid(LocalPlayer()) or !ent:GetModel()
+end
+
 local function network_var_changed(ent, name, old, new, recurse)
 	if name != "INFMAP_CHUNK" then return end
 
 	-- "IT CHANGES CLASS MID-FUCKING EXECUTION??"
-	if !ent:GetModel() and !recurse then
+	if !recurse and network_var_invalid(ent) then
 		timer.Simple(0, function()
 			network_var_changed(ent, name, old, new, true)
 		end)
