@@ -48,6 +48,7 @@ end
 
 function ENT:SetupDataTables()
 	self:NetworkVar("String", 0, "Path")
+	self:NetworkVar("String", 1, "MaterialInternal")
 	self:NetworkVar("Float", 0, "Height")
 end
 
@@ -59,8 +60,8 @@ function ENT:KeyValue(key, value)
 	if key == "path" then
 		self:SetPath(value)
 		self:SetChunk(INFMAP.Vector(0, 0, 0))
-	elseif key == "origin" then
-
+	elseif key == "mat" then
+		self:SetMaterialInternal(value)
 	end
 end
 
@@ -68,9 +69,12 @@ local heightmaps = {}
 function ENT:Initialize()
 	self:SetNoDraw(true)
 
-	self.INFMAP_HEIGHTMAP_SAMPLER = INFMAP.Sampler("materials/Dantana_Height_Map_16384x16384_0_0.r16")--INFMAP.Sampler("materials/" .. self:GetPath())
+	self.INFMAP_HEIGHTMAP_SAMPLER = INFMAP.Sampler("materials/" .. self:GetPath())
 	self.INFMAP_HEIGHTMAP_QUADTREE = INFMAP.Quadtree(Vector(), 393701) -- 10KM
 	table.insert(heightmaps, self)
+	if CLIENT then
+		self.INFMAP_HEIGHTMAP_MATERIAL = Material(self:GetMaterialInternal())
+	end
 end
 
 ------------------
@@ -279,7 +283,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 			-- TODO: cache materials
 			--render.SetMaterial(Material("models/wireframe"))
 			--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
-			render.SetMaterial(Material("sstrp25/heightmaps/wolf_run"))
+			render.SetMaterial(heightmap.INFMAP_HEIGHTMAP_MATERIAL)
 			traverse_render(heightmap, quadtree, offset)
 
 			render.SetMaterial(Material("models/debug/debugwhite"))
