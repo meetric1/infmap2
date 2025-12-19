@@ -18,10 +18,13 @@ end
 
 function ENT:InitializePhysics()
 	local heightmap = self:GetHeightmap()
-	assert(IsValid(heightmap))
+	if !IsValid(heightmap) then return false end
 
-	-- tree may exist (it got split from node networked in previous frame), but metadata has not networked yet
-	local tree = heightmap.INFMAP_HEIGHTMAP_QUADTREE:traverse_path(self:GetPath())
+	local quadtree = heightmap.INFMAP_HEIGHTMAP_QUADTREE
+	if !quadtree then return false end
+
+	-- tree may exist, but we haven't generated metadata
+	local tree = quadtree:traverse_path(self:GetPath())
 	if !tree or !tree.metadata then return false end
 
 	local s = SysTime()
@@ -104,25 +107,31 @@ function ENT:InitializePhysics()
 	return true
 end
 
-local queue = INFMAP.Queue()
-hook.Add("Think", "infmap_heightmap_queue", function()
-	local ent = queue:remove()
-	if !IsValid(ent) then return end
+if CLIENT then
+	-- client is allowed to scatter generation time across multiple frames
+	local queue = INFMAP.Queue()
+	hook.Add("Think", "infmap_heightmap_queue", function()
+		local ent = queue:remove()
+		if !IsValid(ent) then return end
 
-	if !ent:InitializePhysics() then
-		queue:insert(ent)
+		if !ent:InitializePhysics() then
+			queue:insert(ent)
+		end
+	end)
+
+	function ENT:Initialize()
+		self:SetSolid(SOLID_VPHYSICS)
+		self:SetMoveType(MOVETYPE_NONE)
+		queue:insert(self)
 	end
-end)
-
-function ENT:Initialize()
-	queue:insert(self) -- scatter generation time
-	self:SetNoDraw(true)
-	
-	if CLIENT then return end
-
-	self:SetModel("models/props_c17/FurnitureCouch002a.mdl")
-	self:SetSolid(SOLID_VPHYSICS)
-    self:SetMoveType(MOVETYPE_NONE)
+else
+	function ENT:Initialize()
+		self:SetNoDraw(true)
+		self:SetModel("models/props_c17/FurnitureCouch002a.mdl")
+		self:SetSolid(SOLID_VPHYSICS)
+		self:SetMoveType(MOVETYPE_NONE)
+		self:InitializePhysics()
+	end
 end
 
 hook.Add("PhysgunPickup", "infmap_heightmap_disablepickup", function(_, ent)
