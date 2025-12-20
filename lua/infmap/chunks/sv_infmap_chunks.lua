@@ -52,7 +52,14 @@ local function update_entity(ent, chunk)
 	end
 end
 
--- wrapping (teleporting)
+-- revalidator, just incase an entity for whatever reason becomes wrappable again
+timer.Create("infmap_wrap", 10, 0, function()
+	for _, ent in ents.Iterator() do
+		check_ent(ent)
+	end
+end)
+
+-- actual wrapping (teleporting)
 hook.Add("Think", "infmap_wrap", function()
 	for ent, _ in pairs(check_ents) do
 		if !IsValid(ent) then
@@ -114,10 +121,11 @@ hook.Add("PlayerSpawn", "infmap_respawn", function(ply)
 	ply:SetChunk(nil)
 end)
 
--- !!!HACK!!! player enters vehicle and becomes a child (has parent), invalidating it from check_ents
+-- incase players leave a vehicle fast as fuck and revalidator doesn't catch them in time
 hook.Add("PlayerLeaveVehicle", "infmap_respawn", function(ply)
 	check_ent(ply)
 end)
+
 --[[
 hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
 	-- TODO: proper prop spawn chunk handling
