@@ -72,8 +72,15 @@ function ENT:Initialize()
 	self.INFMAP_HEIGHTMAP_SAMPLER = INFMAP.Sampler("materials/" .. self:GetPath())
 	self.INFMAP_HEIGHTMAP_QUADTREE = INFMAP.Quadtree(Vector(), 393701) -- 10KM
 	table.insert(heightmaps, self)
+
 	if CLIENT then
-		self.INFMAP_HEIGHTMAP_MATERIAL = Material(self:GetMaterialInternal())
+		local mat_path = self:GetMaterialInternal()
+		self.INFMAP_HEIGHTMAP_MATERIAL = Material(mat_path)
+		self.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT = CreateMaterial(
+			mat_path .. "_fl",
+			"VertexLitGeneric",
+			self.INFMAP_HEIGHTMAP_MATERIAL:GetKeyValues()
+		)
 	end
 end
 
@@ -82,7 +89,7 @@ end
 ------------------
 if SERVER then
 	local function traverse_collision(heightmap, tree, pos)
-		if !tree.colliders and tree.bottom then
+		if !tree.colliders and tree.bottom and tree:should_split_pos(pos, 1, true) then
 			tree.colliders = {}
 			validate_tree(heightmap, tree)
 
@@ -125,7 +132,7 @@ if SERVER then
 		end
 	end
 
-	timer.Create("INFMAP_HEIGHTMAP", 0.25, 0, function()
+	timer.Create("INFMAP_HEIGHTMAP", 0.1, 0, function()
 		for _, ply in player.Iterator() do
 			local ply_chunk, ply_offset = get_chunk(ply)
 			if !ply_chunk then continue end
@@ -283,7 +290,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 			render.SetMaterial(heightmap.INFMAP_HEIGHTMAP_MATERIAL)
 			traverse_render(heightmap, quadtree, offset)
 
-			render.SetMaterial(Material("models/debug/debugwhite"))
+			render.SetMaterial(heightmap.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT)
 			render.RenderFlashlights(function()
 				traverse_render(heightmap, quadtree, offset)
 			end)

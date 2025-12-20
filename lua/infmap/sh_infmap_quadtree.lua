@@ -1,6 +1,6 @@
 local QUADTREE_FUNCS = {
-	["should_split_pos"] = function(self, pos, extra)
-		if self.bottom then return false end
+	["should_split_pos"] = function(self, pos, extra, ignore)
+		if !ignore and self.bottom then return false end
 		--if self.size > 2000 then return true end
 
 		local wiggle = self.size * (extra or 1) -- split wiggle room

@@ -18,14 +18,14 @@ end
 
 function ENT:InitializePhysics()
 	local heightmap = self:GetHeightmap()
-	if !IsValid(heightmap) then return false end
+	if !IsValid(heightmap) then return end
 
 	local quadtree = heightmap.INFMAP_HEIGHTMAP_QUADTREE
-	if !quadtree then return false end
+	if !quadtree then return end
 
 	-- tree may exist, but we haven't generated metadata
 	local tree = quadtree:traverse_path(self:GetPath())
-	if !tree or !tree.metadata then return false end
+	if !tree or !tree.metadata then return end
 
 	local skip = 1
 	local metadata = tree.metadata
@@ -90,7 +90,7 @@ function ENT:InitializePhysics()
 		INFMAP.update_cross_chunk_collision(self)
 	end
 	
-	--print("physmesh generation with " .. #vertices .. " points took " .. (SysTime() - s) * 1000 .. "ms")
+	--print("physmesh generation with " .. #triangles .. " points took " .. (SysTime() - s) * 1000 .. "ms")
 
 	--[[
 	if SERVER then
@@ -101,26 +101,22 @@ function ENT:InitializePhysics()
 			debugoverlay.Triangle(p1, p2, p3, 10, Color(0, 255, 255, 100))
 		end
 	end]]
-
-	return true
 end
 
 if CLIENT then
-	-- client is allowed to scatter generation time across multiple frames
-	local queue = INFMAP.Queue()
-	hook.Add("Think", "infmap_heightmap_queue", function()
-		local ent = queue:remove()
-		if !IsValid(ent) then return end
-
-		if !ent:InitializePhysics() then
-			queue:insert(ent)
-		end
-	end)
-
 	function ENT:Initialize()
 		self:SetSolid(SOLID_VPHYSICS)
 		self:SetMoveType(MOVETYPE_NONE)
-		queue:insert(self)
+	end
+
+	function ENT:Think()
+		if !IsValid(self:GetPhysicsObject()) then
+			self:InitializePhysics()
+		end
+
+		-- scatter generation time across multiple frames
+		self:SetNextClientThink(CurTime() + 0.5 + math.random() * 0.5)
+		return true
 	end
 else
 	function ENT:Initialize()
