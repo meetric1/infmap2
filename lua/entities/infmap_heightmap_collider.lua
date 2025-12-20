@@ -27,8 +27,6 @@ function ENT:InitializePhysics()
 	local tree = quadtree:traverse_path(self:GetPath())
 	if !tree or !tree.metadata then return false end
 
-	local s = SysTime()
-
 	local skip = 1
 	local metadata = tree.metadata
 	local res = math.sqrt(#metadata)
@@ -92,7 +90,7 @@ function ENT:InitializePhysics()
 		INFMAP.update_cross_chunk_collision(self)
 	end
 	
-	print("physmesh generation with " .. #vertices .. " points took " .. (SysTime() - s) * 1000 .. "ms")
+	--print("physmesh generation with " .. #vertices .. " points took " .. (SysTime() - s) * 1000 .. "ms")
 
 	--[[
 	if SERVER then

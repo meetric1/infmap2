@@ -126,8 +126,6 @@ if SERVER then
 	end
 
 	timer.Create("INFMAP_HEIGHTMAP", 0.25, 0, function()
-		local s = SysTime()
-
 		for _, ply in player.Iterator() do
 			local ply_chunk, ply_offset = get_chunk(ply)
 			if !ply_chunk then continue end
@@ -142,7 +140,7 @@ if SERVER then
 			end
 		end
 
-		print("heightmaps parsed in " .. (SysTime() - s) * 1000 .. "ms")
+		--print("heightmaps parsed in " .. (SysTime() - s) * 1000 .. "ms")
 	end)
 
 	return
@@ -260,10 +258,9 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 	-- build heightmap (if applicable)
 	local new_tree = imesh_queue:remove()
 	if new_tree then
-		local s = SysTime()
 		validate_tree(new_tree[1], new_tree[2])
 		generate_tree(new_tree[1], new_tree[2])
-		print("mesh generation with " .. RESOLUTION .. " points took " .. (SysTime() - s) * 1000 .. "ms")
+		--print("mesh generation with " .. RESOLUTION .. " points took " .. (SysTime() - s) * 1000 .. "ms")
 	end
 
 	-- render heightmaps
