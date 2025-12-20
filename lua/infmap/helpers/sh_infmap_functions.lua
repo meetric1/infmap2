@@ -206,8 +206,8 @@ INFMAP.teleport_class_filter = {
 }
 
 -- teleport filter - which objects shouldnt be wrapped?
-function INFMAP.filter_teleport(ent, ignore_chunk_valid)
-	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
+function INFMAP.filter_teleport(ent, ignore)
+	if !ignore and !ent:IsChunkValid() then return true end
 
 	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
@@ -226,8 +226,8 @@ function INFMAP.filter_collision(ent)
 end
 
 -- renderer filter - which entities shouldnt be rendered?
-function INFMAP.filter_render(ent, ignore_chunk_valid)
-	if !ignore_chunk_valid and !ent:IsChunkValid() then return true end
+function INFMAP.filter_render(ent, ignore)
+	if !ignore and !ent:IsChunkValid() then return true end
 	
 	if ent:GetNoDraw() then return true end
 

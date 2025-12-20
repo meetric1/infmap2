@@ -113,6 +113,11 @@ end)
 hook.Add("PlayerSpawn", "infmap_respawn", function(ply)
 	ply:SetChunk(nil)
 end)
+
+-- !!!HACK!!! player enters vehicle and becomes a child (has parent), invalidating it from check_ents
+hook.Add("PlayerLeaveVehicle", "infmap_respawn", function(ply)
+	check_ent(ply)
+end)
 --[[
 hook.Add("OnEntityCreated", "infmap_spawn", function(ent)
 	-- TODO: proper prop spawn chunk handling

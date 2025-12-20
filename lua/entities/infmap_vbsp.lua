@@ -80,15 +80,16 @@ function ENT:Think()
 	for ent, _ in pairs(self.INFMAP_VBSP_CHECK) do
 		if !IsValid(ent) then
 			self.INFMAP_VBSP_CHECK[ent] = nil
-		else
-			local pos = ent:INFMAP_GetPos()
-			if !INFMAP.aabb_intersect_aabb(pos, pos, mins, maxs) then continue end
-
-			INFMAP.validate_constraints(ent)
-			if INFMAP.filter_teleport(ent) then continue end
-
-			update_entity(ent, self.INFMAP_VBSP_OFFSET, nil)
+			continue
 		end
+		
+		local pos = ent:INFMAP_GetPos()
+		if !INFMAP.aabb_intersect_aabb(pos, pos, mins, maxs) then continue end
+
+		INFMAP.validate_constraints(ent)
+		if INFMAP.filter_teleport(ent) then continue end
+
+		update_entity(ent, self.INFMAP_VBSP_OFFSET, nil)
 	end
 
 	self:NextThink(CurTime())
