@@ -138,7 +138,7 @@ if SERVER then
 			local pos = ply:INFMAP_GetPos() 
 			pos:Add(ply_offset)
 			for _, heightmap in ipairs(heightmaps) do
-				if !heightmap.INFMAP_HEIGHTMAP_SAMPLER.metadata then continue end
+				if !heightmap.INFMAP_HEIGHTMAP_SAMPLER or !heightmap.INFMAP_HEIGHTMAP_SAMPLER.metadata then continue end
 
 				local offset = INFMAP.unlocalize(pos, ply_chunk - heightmap:GetChunk())
 				traverse_collision(heightmap, heightmap.INFMAP_HEIGHTMAP_QUADTREE, offset)

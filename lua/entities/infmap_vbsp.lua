@@ -10,7 +10,6 @@ if !INFMAP then return end
 local function update_entity(ent, offset, chunk)
 	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
 		if e:IsPlayer() then e:DropObject() end
-		e:ForcePlayerDrop()
 
 		e:SetChunk(chunk)
 		INFMAP.unfucked_setpos(e, e:INFMAP_GetPos() + offset)
