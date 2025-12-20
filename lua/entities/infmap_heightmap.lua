@@ -76,11 +76,9 @@ function ENT:Initialize()
 	if CLIENT then
 		local mat_path = self:GetMaterialInternal()
 		self.INFMAP_HEIGHTMAP_MATERIAL = Material(mat_path)
-		self.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT = CreateMaterial(
-			mat_path .. "_fl",
-			"VertexLitGeneric",
-			self.INFMAP_HEIGHTMAP_MATERIAL:GetKeyValues()
-		)
+		self.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT = CreateMaterial(mat_path .. "_vl", "VertexLitGeneric", {
+			["$basetexture"] = self.INFMAP_HEIGHTMAP_MATERIAL:GetString("$basetexture")
+		})
 	end
 end
 
