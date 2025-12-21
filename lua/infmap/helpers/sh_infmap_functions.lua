@@ -62,14 +62,15 @@ end
 
 -- clamp to source bounds
 function INFMAP.clamp_pos(pos)
+	local math_Clamp = math.Clamp
 	return Vector(
-		math.Clamp(pos[1], -2^14+1, 2^14-1),
-		math.Clamp(pos[2], -2^14+1, 2^14-1),
-		math.Clamp(pos[3], -2^14+1, 2^14-1)
+		math_Clamp(pos[1], -2^14+1, 2^14-1),
+		math_Clamp(pos[2], -2^14+1, 2^14-1),
+		math_Clamp(pos[3], -2^14+1, 2^14-1)
 	)
 end
 
--- Is the position within source bounds (or a specified bounds)?
+-- Is the position within source bounds
 function INFMAP.in_bounds(pos)
 	return (
 		pos[1] > -2^14 and pos[1] < 2^14 and
@@ -274,7 +275,6 @@ end
 -- algorithm to split concave (and convex) shapes given a set of triangles
 -- tris are in the format {pos1, pos2, pos3...}
 -- code based on Glass: Rewrite
---[[
 function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	if !tris then return {} end
 
@@ -385,4 +385,4 @@ function INFMAP.split_concave(tris, plane_pos, plane_dir)
 	--end
 
 	return split_tris
-end]]
+end

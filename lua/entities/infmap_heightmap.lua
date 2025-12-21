@@ -28,16 +28,16 @@ local function validate_tree(heightmap, tree)
 	local sampler = heightmap.INFMAP_HEIGHTMAP_SAMPLER
 	local inv_res = tree.size / RESOLUTION
 	local inv_size = 1 / heightmap.INFMAP_HEIGHTMAP_QUADTREE.size
-	local min, max = 2^16-1, 0
+	local min, max
 	for y = 0, RESOLUTION do
 		for x = 0, RESOLUTION do
-			local sample = math.Round(sampler:sample(
+			local sample = sampler:sample(
 				(tree.pos[1] + x * inv_res) * inv_size, 
 				(tree.pos[2] + y * inv_res) * inv_size,
 				false
-			))
+			)
 
-			min, max = math.min(min, sample), math.max(max, sample)
+			min, max = math.min(min or sample, sample), math.max(max or sample, sample)
 			table.insert(metadata, sample)
 		end
 	end
@@ -91,6 +91,7 @@ if SERVER then
 			tree.colliders = {}
 			validate_tree(heightmap, tree)
 
+			-- TODO: only spawn relevant chunks (for VERY steep slopes)
 			local _, chunk_min = INFMAP.localize(Vector(0, 0, tree.metadata.min))
 			local _, chunk_max = INFMAP.localize(Vector(0, 0, tree.metadata.max))
 			local pos, chunk_offset = INFMAP.localize(tree.pos)

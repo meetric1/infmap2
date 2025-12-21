@@ -76,8 +76,8 @@ function ENT:InitializePhysics()
 	end
 
 	-- cutoff
-	--local chunk_top = INFMAP.chunk_origin + Vector(0, 0, INFMAP.chunk_size)
-	--local chunk_bottom = INFMAP.chunk_origin - Vector(0, 0, INFMAP.chunk_size)
+	--local chunk_top = INFMAP.chunk_origin + Vector(0, 0, INFMAP.chunk_size + 1)
+	--local chunk_bottom = INFMAP.chunk_origin - Vector(0, 0, INFMAP.chunk_size + 1)
 	--triangles = INFMAP.split_concave(triangles, chunk_top, Vector(0, 0, -1))
 	--triangles = INFMAP.split_concave(triangles, chunk_bottom, Vector(0, 0, 1))
 
