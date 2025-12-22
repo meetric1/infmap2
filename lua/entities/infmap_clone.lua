@@ -62,10 +62,10 @@ function ENT:UpdatePhysics()
 		self:INFMAP_SetPos(pos)
 		self:SetAngles(parent:GetAngles())
 		--debugoverlay.Box(pos, self:OBBMins(), self:OBBMaxs(), 1, Color(255, 255, 255, 255))
-	else
-		self_phys:INFMAP_SetPos(self:INFMAP_GetPos())
-		self_phys:SetAngles(self:GetAngles())
 	end
+
+	self_phys:INFMAP_SetPos(self:INFMAP_GetPos())
+	self_phys:SetAngles(self:GetAngles())
 end
 
 function ENT:Initialize()
@@ -74,6 +74,7 @@ function ENT:Initialize()
 	local parent = self:GetReferenceParent()
 	self:SetModel(parent:GetModel())
 	self:SetNoDraw(true)
+	self:UpdatePhysics()
 	parent:DeleteOnRemove(self)
 end
 

@@ -84,6 +84,10 @@ end, true)
 ---------------------
 local PHYSOBJ = FindMetaTable("PhysObj")
 
+detour(PHYSOBJ, "GetPos", function(self)
+	return INFMAP.unlocalize(self:INFMAP_GetPos(), self:GetEntity():GetChunk() - LocalPlayer():GetChunk())
+end)
+
 detour(PHYSOBJ, "SetPos", function(self, pos)
 	self:INFMAP_SetPos(INFMAP.clamp_pos(pos)) -- shut console up
 end)

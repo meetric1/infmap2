@@ -16,7 +16,7 @@ function INFMAP.unfucked_setpos(ent, pos)
 		--ent:INFMAP_SetPos(pos)
 	else
 		local phys = ent:GetPhysicsObject()
-		if IsValid(phys) then 
+		if IsValid(phys) then
 			local vel = phys:GetVelocity()
 			ent:INFMAP_SetPos(pos)
 			phys:SetVelocity(vel)
@@ -34,15 +34,17 @@ function INFMAP.unfucked_setpos(ent, pos)
 end
 
 -- merges 2 contraptions into the same chunk (ent1 -> ent2)
-function INFMAP.merge_constraints(ent1_constrained, ent2_constrained)
-	if ent1_constrained == ent2_constrained then 
+function INFMAP.merge_constraints(ent1, ent2)
+	local ent1_constraints = ent1.INFMAP_CONSTRAINTS
+	local ent2_constraints = ent2.INFMAP_CONSTRAINTS
+	if !ent1_constraints or !ent2_constraints or ent1_constraints == ent2_constraints then 
 		return false
 	end
 
-	local ent2_chunk = ent2_constrained.parent:GetChunk()
-	for _, e in ipairs(ent1_constrained) do
-		table.insert(ent2_constrained, e)
-		e.INFMAP_CONSTRAINTS = ent2_constrained
+	local ent2_chunk = ent2:GetChunk()
+	for _, e in ipairs(ent1_constraints) do
+		table.insert(ent2_constraints, e)
+		e.INFMAP_CONSTRAINTS = ent2_constraints
 
 		-- localize ent
 		if ent2_chunk then
@@ -68,7 +70,7 @@ function INFMAP.validate_constraints(ent, prev)
 	end
 
 	if IsValid(prev) then
-		if !INFMAP.merge_constraints(ent.INFMAP_CONSTRAINTS, prev.INFMAP_CONSTRAINTS) then return end
+		if !INFMAP.merge_constraints(ent, prev) then return end
 	end
 
 	-- recurse

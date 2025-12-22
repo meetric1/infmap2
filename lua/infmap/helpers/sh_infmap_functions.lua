@@ -151,7 +151,7 @@ end
 	-- valid constraint filter
 
 -- blacklist of all the classes that are useless (never wrapped)
-INFMAP.class_filter = INFMAP.class_filter or {
+INFMAP.class_filter = {
 	["infmap"] = true,
 	["infmap_clone"] = true,
 	["infmap_vbsp"] = true,
@@ -188,6 +188,7 @@ INFMAP.class_filter = INFMAP.class_filter or {
 	["phys_spring"] = true,
 	["sky_camera"] = true,
 	["logic_collision_pair"] = true,
+	["lvs_wheeldrive_steerhandler"] = true,
 }
 
 -- base filter - nothing gets through this

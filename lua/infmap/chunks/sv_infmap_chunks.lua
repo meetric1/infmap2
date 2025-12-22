@@ -105,7 +105,7 @@ hook.Add("EntityRemoved", "infmap_constraint", function(ent)
 		
 		local constraints = e.INFMAP_CONSTRAINTS
 		if !constraints then continue end -- duh, already invalid
-
+		
 		-- invalidate constraints
 		for _, e in ipairs(constraints) do
 			e.INFMAP_CONSTRAINTS = nil

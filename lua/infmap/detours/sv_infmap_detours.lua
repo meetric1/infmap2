@@ -99,15 +99,11 @@ detour(ENTITY, "Spawn", function(self)
 
 	-- STOP!!! we're about to create a constraint with 2 entities, we need to localize all the data
 	local ent1, ent2 = self.INFMAP_PHYS_CONSTRAINT_OBJECTS[1], self.INFMAP_PHYS_CONSTRAINT_OBJECTS[2]
-	if ent1:IsChunkValid() != ent2:IsChunkValid() then
-		error("Tried to constrain 2 objects in different coordinate systems!")
-		return
-	end
 	
 	-- localize prop locations
 	INFMAP.validate_constraints(ent1)
 	INFMAP.validate_constraints(ent2)
-	INFMAP.merge_constraints(ent2.INFMAP_CONSTRAINTS, ent1.INFMAP_CONSTRAINTS)
+	INFMAP.merge_constraints(ent1, ent2)
 
 	-- Localize constraint data
 	if self:IsChunkValid() then
