@@ -17,10 +17,13 @@ end
 local function validate_pickup(ent)
 	INFMAP.validate_constraints(ent)
 
-	if ent.INFMAP_CONSTRAINTS then
-		ent.INFMAP_CONSTRAINTS.parent = ent
+	if ent.INFMAP_CONSTRAINED then
+		ent.INFMAP_CONSTRAINED.parent = ent
 		check_ent(ent)
+		return true
 	end
+
+	return false
 end
 
 local player_pickups = {}
@@ -39,18 +42,6 @@ hook.Add("GravGunOnPickedUp", "infmap_pickup", player_pickup)
 hook.Add("GravGunOnDropped", "infmap_pickup", player_drop)
 hook.Add("OnPlayerPhysicsPickup", "infmap_pickup", player_pickup)
 hook.Add("OnPlayerPhysicsDrop", "infmap_pickup", player_drop)
-
--- wrapping logic
-local function update_entity(ent, chunk)
-	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
-		-- wrap
-		local chunk_offset = e:GetChunk() - chunk
-		local pos = INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset)
-
-		e:SetChunk(chunk)
-		INFMAP.unfucked_setpos(e, pos)
-	end
-end
 
 -- revalidator, just incase an entity for whatever reason becomes wrappable again
 timer.Create("infmap_wrap", 10, 0, function()
@@ -73,6 +64,7 @@ hook.Add("Think", "infmap_wrap", function()
 
 		-- time to teleport
 		local _, chunk = INFMAP.localize(ent:INFMAP_GetPos())
+		local offset = -INFMAP.unlocalize(vector_origin, chunk)
 		chunk = chunk + ent:GetChunk()
 
 		-- hook support (slow..)
@@ -80,14 +72,15 @@ hook.Add("Think", "infmap_wrap", function()
 		--if !err and prevent then continue end
 
 		-- teleport
-		update_entity(ent, chunk)
+		INFMAP.set_constraint_pos(ent.INFMAP_CONSTRAINED, offset, chunk)
 
 		-- if we're holding something, force it into our chunk
-		if ent:IsPlayer() then 
+		if ent:IsPlayer() then
 			local holding = player_pickups[ent]
 			if IsValid(holding) then
-				validate_pickup(holding)
-				update_entity(holding, chunk)
+				if validate_pickup(holding) then
+					INFMAP.set_constraint_pos(holding.INFMAP_CONSTRAINED, offset, chunk)
+				end
 			end
 		end
 	end
@@ -103,12 +96,12 @@ hook.Add("EntityRemoved", "infmap_constraint", function(ent)
 	for _, e in ipairs({ent.Ent1, ent.Ent2}) do
 		if !IsValid(e) then continue end
 		
-		local constraints = e.INFMAP_CONSTRAINTS
+		local constraints = e.INFMAP_CONSTRAINED
 		if !constraints then continue end -- duh, already invalid
 		
 		-- invalidate constraints
 		for _, e in ipairs(constraints) do
-			e.INFMAP_CONSTRAINTS = nil
+			e.INFMAP_CONSTRAINED = nil
 			check_ent(e)
 		end
 	end

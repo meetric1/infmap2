@@ -6,16 +6,6 @@ ENT.PrintName = "infmap_vbsp"
 
 if !INFMAP then return end
 
--- TODO: physgun support
-local function update_entity(ent, offset, chunk)
-	for _, e in ipairs(ent.INFMAP_CONSTRAINTS) do
-		if e:IsPlayer() then e:DropObject() end
-
-		e:SetChunk(chunk)
-		INFMAP.unfucked_setpos(e, e:INFMAP_GetPos() + offset)
-	end
-end
-
 function ENT:KeyValue(key, value)
     if key == "chunk" then
 		self.INFMAP_VBSP_CHUNK = INFMAP.Vector(value)
@@ -63,12 +53,13 @@ function ENT:EndTouch(ent)
 	if ent:IsMarkedForDeletion() or ent:IsChunkValid() then return end
 
 	INFMAP.validate_constraints(ent)
-	if !ent.INFMAP_CONSTRAINTS then return end
+	if !ent.INFMAP_CONSTRAINED then return end
 	
-	ent = ent.INFMAP_CONSTRAINTS.parent
+	ent = ent.INFMAP_CONSTRAINED.parent
 	if INFMAP.filter_teleport(ent, true) then return end
 
-	update_entity(ent, -self.INFMAP_VBSP_OFFSET, self.INFMAP_VBSP_CHUNK)
+	if ent:IsPlayer() then ent:DropObject() end
+	INFMAP.set_constraint_pos(ent.INFMAP_CONSTRAINED, -self.INFMAP_VBSP_OFFSET, self.INFMAP_VBSP_CHUNK)
 end
 
 -- infmap coordinates -> normal coordinates
@@ -88,7 +79,8 @@ function ENT:Think()
 		INFMAP.validate_constraints(ent)
 		if INFMAP.filter_teleport(ent) then continue end
 
-		update_entity(ent, self.INFMAP_VBSP_OFFSET, nil)
+		if ent:IsPlayer() then ent:DropObject() end
+		INFMAP.set_constraint_pos(ent.INFMAP_CONSTRAINED, self.INFMAP_VBSP_OFFSET, nil)
 	end
 
 	self:NextThink(CurTime())

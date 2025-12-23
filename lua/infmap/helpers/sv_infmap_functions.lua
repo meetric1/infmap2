@@ -1,5 +1,5 @@
 -- setting position kills all velocity
-function INFMAP.unfucked_setpos(ent, pos)
+local function unfucked_setpos(ent, pos, vel)
 	pos = INFMAP.clamp_pos(pos)
 
 	-- ragdoll moment
@@ -12,48 +12,58 @@ function INFMAP.unfucked_setpos(ent, pos)
 			phys:INFMAP_SetPos(pos + diff)
 			phys:SetVelocity(vel)
 		end
-
 		--ent:INFMAP_SetPos(pos)
 	else
+		ent:INFMAP_SetPos(pos)
 		local phys = ent:GetPhysicsObject()
 		if IsValid(phys) then
-			local vel = phys:GetVelocity()
-			ent:INFMAP_SetPos(pos)
 			phys:SetVelocity(vel)
-		else
-			ent:INFMAP_SetPos(pos)
 		end
 	end
 
 	-- for the rare case where 2 players are holding the same object
+	local ent_chunk = ent:GetChunk()
 	for _, ply in player.Iterator() do
-		if !ent:InChunk(ply) then
+		if ply:GetChunk() != ent_chunk then
 			ply:DropObject(ent)
 		end
 	end
 end
 
+function INFMAP.set_constraint_pos(system, offset, chunk)
+	local velocities = {}
+	for i, ent in ipairs(system) do
+		velocities[i] = ent:GetVelocity()
+	end
+
+	for i, ent in ipairs(system) do
+		ent:SetChunk(chunk)
+
+		local pos = ent:INFMAP_GetPos() pos:Add(offset)
+		unfucked_setpos(ent, pos, velocities[i])
+	end
+end
+
 -- merges 2 contraptions into the same chunk (ent1 -> ent2)
 function INFMAP.merge_constraints(ent1, ent2)
-	local ent1_constraints = ent1.INFMAP_CONSTRAINTS
-	local ent2_constraints = ent2.INFMAP_CONSTRAINTS
+	local ent1_constraints = ent1.INFMAP_CONSTRAINED
+	local ent2_constraints = ent2.INFMAP_CONSTRAINED
 	if !ent1_constraints or !ent2_constraints or ent1_constraints == ent2_constraints then 
 		return false
 	end
-
-	local ent2_chunk = ent2:GetChunk()
+	
+	-- merge systems
 	for _, e in ipairs(ent1_constraints) do
 		table.insert(ent2_constraints, e)
-		e.INFMAP_CONSTRAINTS = ent2_constraints
+		e.INFMAP_CONSTRAINED = ent2_constraints
+	end
 
-		-- localize ent
-		if ent2_chunk then
-			local chunk_offset = (e:GetChunk() or ent2_chunk) - ent2_chunk
-			if !chunk_offset:IsZero() then
-				INFMAP.unfucked_setpos(e, INFMAP.unlocalize(e:INFMAP_GetPos(), chunk_offset))
-				e:SetChunk(ent2_chunk)
-			end
-		end
+	-- localize old system into new
+	local ent1_chunk = ent1:GetChunk()
+	local ent2_chunk = ent2:GetChunk()
+	if ent1_chunk and ent2_chunk and ent1_chunk != ent2_chunk then
+		local offset = INFMAP.unlocalize(vector_origin, ent1_chunk - ent2_chunk)
+		INFMAP.set_constraint_pos(ent1_constraints, offset, ent2_chunk)
 	end
 
 	return true
@@ -63,11 +73,9 @@ end
 -- table of ents, with "parent" being the main entity to check
 function INFMAP.validate_constraints(ent, prev)
 	if INFMAP.filter_constraint_parsing(ent) then return end
+	if ent.INFMAP_CONSTRAINED then return end -- already scanned
 
-	-- TODO: optimize (don't need to initialize ent table if prev exists)
-	if !ent.INFMAP_CONSTRAINTS then
-		ent.INFMAP_CONSTRAINTS = {[1] = ent, ["parent"] = ent}
-	end
+	ent.INFMAP_CONSTRAINED = {[1] = ent, ["parent"] = ent}
 
 	if IsValid(prev) then
 		if !INFMAP.merge_constraints(ent, prev) then return end
@@ -92,8 +100,8 @@ function INFMAP.update_cross_chunk_collision(ent)
 	local chunk = ent:GetChunk()
 	local _, chunk_min = INFMAP.localize(aabb_min)
 	local _, chunk_max = INFMAP.localize(aabb_max)
-	if INFMAP.filter_collision(ent) or chunk_min == chunk_max then
-		-- outside of area for cloning to happen (or invalidated), remove all clones
+	if INFMAP.filter_collision(ent) or (chunk_min == chunk and chunk_max == chunk) then
+		-- inside of area that cloning doesn't happen (or invalidated), remove all clones
 		if ent.INFMAP_CLONES then
 			for _, e in pairs(ent.INFMAP_CLONES) do
 				SafeRemoveEntity(e)

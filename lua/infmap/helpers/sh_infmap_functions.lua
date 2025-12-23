@@ -142,14 +142,7 @@ function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
 	)
 end
 
--- we need more filters, as there are a *lot* of weird exceptions. we need:
-	-- general class filter
-	-- cross chunk collision filter
-	-- rendering filter
-	-- should teleport filter
-	-- constraint filter
-	-- valid constraint filter
-
+-- we need filters, as there are a *lot* of weird exceptions
 -- blacklist of all the classes that are useless (never wrapped)
 INFMAP.class_filter = {
 	["infmap"] = true,
@@ -196,8 +189,15 @@ function INFMAP.filter_general(ent)
 	if ent:IsWorld() then return true end
 	if ent.IsConstraint and ent:IsConstraint() then return true end
 	if INFMAP.class_filter[ent:GetClass()] then return true end
-	
+
 	return false
+end
+
+-- constraint filter - which entities should we ignore during constraint parsing
+function INFMAP.filter_constraint_parsing(ent)
+	if IsValid(ent:GetParent()) then return true end
+
+	return INFMAP.filter_general(ent)
 end
 
 -- blacklist
@@ -211,12 +211,11 @@ INFMAP.teleport_class_filter = {
 function INFMAP.filter_teleport(ent, ignore)
 	if !ignore and !ent:IsChunkValid() then return true end
 
-	if IsValid(ent:GetParent()) then return true end
 	if ent:IsPlayer() and !ent:Alive() then return true end
-	if ent.INFMAP_CONSTRAINTS and (ent.INFMAP_CONSTRAINTS.parent != ent) then return true end
+	if ent.INFMAP_CONSTRAINED and (ent.INFMAP_CONSTRAINED.parent != ent) then return true end
 	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
 
-	return INFMAP.filter_general(ent)
+	return INFMAP.filter_constraint_parsing(ent)
 end
 
 -- collision filter - which entities shouldnt have cross-chunk collision?
@@ -243,13 +242,6 @@ function INFMAP.filter_render_fancy(ent)
 	if ent:IsRagdoll() then return true end
 
 	return false
-end
-
--- constraint filter - which entities should we ignore during constraint parsing
-function INFMAP.filter_constraint_parsing(ent)
-	if IsValid(ent:GetParent()) then return true end
-
-	return INFMAP.filter_general(ent)
 end
 
 -- constraint filter- what constraints aren't actually constraints?
