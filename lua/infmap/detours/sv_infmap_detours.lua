@@ -167,7 +167,7 @@ end)
 ---------------------
 -- pickups (health/ammo/objects)
 local function player_should_pickup(ply, ent)
-	if ply.INFMAP_CHUNK != ent.INFMAP_CHUNK then
+	if !ply:InChunk(ent) then
 		return false
 	end
 end
@@ -181,7 +181,7 @@ hook.Add("EntityTakeDamage", "infmap_damage_detour", function(ply, dmg)
 	if !dmg:IsExplosionDamage() and !dmg:IsDamageType(DMG_BURN) then return end
 
 	local ent = dmg:GetInflictor()
-	if ply.INFMAP_CHUNK != ent.INFMAP_CHUNK then
+	if !ply:InChunk(ent) then
 		return true
 	end
 end)

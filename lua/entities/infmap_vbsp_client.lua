@@ -47,6 +47,10 @@ function ENT:Draw()
 	--self:DrawModel()
 end
 
+function ENT:Remove()
+	vbsps[INFMAP.encode_vector(self:GetChunk())] = nil
+end
+
 -- VBSP -> INFMAP
 hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
 	local local_player = LocalPlayer()

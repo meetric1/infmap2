@@ -10,7 +10,7 @@ function ENT:KeyValue(key, value)
     if key == "chunk" then
 		self.INFMAP_VBSP_CHUNK = INFMAP.Vector(value)
     elseif key == "position" then
-		self.INFMAP_VBSP_POS = Vector(value) -- May be nil
+		self.INFMAP_VBSP_POS = Vector(value)
 	elseif key == "networkdist" then
 		local value = tonumber(value) or 2^15
 		self.INFMAP_VBSP_FARZ = value * value
@@ -19,25 +19,25 @@ end
 
 local vbsps = {}
 function ENT:Initialize()
+	SafeRemoveEntity(self.INFMAP_VBSP_CLIENT)
+
 	local center = self:OBBCenter()
 	local mins = self:OBBMins()
 	local maxs = self:OBBMaxs()
 	local pos_local = self:INFMAP_GetPos() + center
-	local pos_world = (self.INFMAP_VBSP_POS or Vector()) + INFMAP.chunk_origin
-
+	local pos_world = self.INFMAP_VBSP_POS + INFMAP.chunk_origin
 	local client_vbsp = ents.Create("infmap_vbsp_client")
 	client_vbsp:INFMAP_SetPos(pos_world)
 	client_vbsp:SetVBSPPos(pos_local)
 	client_vbsp:SetVBSPSize((maxs - mins) / 2)
 	client_vbsp:SetChunk(self.INFMAP_VBSP_CHUNK)
-	--client_vbsp:SetModel("models/sstrp/mcculloch.mdl")
 	client_vbsp:Spawn()
 
-	self.INFMAP_VBSP_CHECK = {}
+	self.INFMAP_VBSP_CLIENT = client_vbsp
 	self.INFMAP_VBSP_OFFSET = pos_local - pos_world
 	self.INFMAP_VBSP_MAXS = maxs - self.INFMAP_VBSP_OFFSET
 	self.INFMAP_VBSP_MINS = mins - self.INFMAP_VBSP_OFFSET
-	self.INFMAP_VBSP_CLIENT = client_vbsp
+	self.INFMAP_VBSP_CHECK = {}
 
 	vbsps[INFMAP.encode_vector(self.INFMAP_VBSP_CHUNK)] = self
 end
@@ -87,7 +87,7 @@ function ENT:Think()
 	return true
 end
 
-hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
+local function check_ent(ent, chunk, prev_chunk)
 	if string.find(ent:GetClass(), "infmap") then return end
 
 	-- old
@@ -114,7 +114,25 @@ hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)
 		end
 	end
 	ent.INFMAP_VBSP_CHECK = #check > 0 and check or nil
-end)
+end
+
+function ENT:SetVBSPChunk(chunk, pos)
+	if pos then
+		self.INFMAP_VBSP_POS = pos
+	end
+
+	vbsps[INFMAP.encode_vector(self.INFMAP_VBSP_CHUNK)] = nil
+	self.INFMAP_VBSP_CHUNK = chunk
+	self:Initialize()
+
+	for _, ent in ents.Iterator() do
+		if !ent:InChunk(chunk) then continue end
+
+		check_ent(ent, ent:GetChunk(), nil) -- SLOW
+	end
+end
+
+hook.Add("OnChunkUpdate", "infmap_vbsp", check_ent)
 
 hook.Add("SetupPlayerVisibility", "infmap_vbsp", function(ply, view_entity)
 	if !ply:IsChunkValid() then
