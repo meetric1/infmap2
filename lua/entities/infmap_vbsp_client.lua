@@ -56,7 +56,7 @@ hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
 	local local_player = LocalPlayer()
 	if local_player:IsChunkValid() then return end
 
-	local vbsp = local_player:GetNWEntity("INFMAP_VBSP")
+	local vbsp = local_player:GetNWEntity("INFMAP_VBSP_CLIENT")
 	if !IsValid(vbsp) then return end
 	
 	local origin = INFMAP.chunk_origin

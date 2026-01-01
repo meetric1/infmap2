@@ -12,7 +12,7 @@ local function get_chunk(ply)
 		return ply_chunk, vector_origin
 	end
 
-	local vbsp = ply:GetNWEntity("INFMAP_VBSP")
+	local vbsp = ply:GetNWEntity("INFMAP_VBSP_CLIENT")
 	if IsValid(vbsp) then
 		local offset = vbsp:INFMAP_GetPos() - vbsp:GetVBSPPos()
 		return vbsp:GetChunk(), offset

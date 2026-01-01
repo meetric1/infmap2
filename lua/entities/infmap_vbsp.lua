@@ -43,9 +43,10 @@ function ENT:Initialize()
 end
 
 function ENT:StartTouch(ent)
-	if !ent:IsPlayer() then return end
+	ent.INFMAP_VBSP = self
 
-	ent:SetNWEntity("INFMAP_VBSP", self.INFMAP_VBSP_CLIENT)
+	if !ent:IsPlayer() then return end
+	ent:SetNWEntity("INFMAP_VBSP_CLIENT", self.INFMAP_VBSP_CLIENT)
 end
 
 -- normal coordinates -> infmap coordinates
@@ -58,8 +59,12 @@ function ENT:EndTouch(ent)
 	ent = ent.INFMAP_CONSTRAINED.parent
 	if INFMAP.filter_teleport(ent, true) then return end
 
-	if ent:IsPlayer() then ent:DropObject() end
+	if ent:IsPlayer() then 
+		ent:DropObject() 
+	end
+
 	INFMAP.set_constraint_pos(ent.INFMAP_CONSTRAINED, -self.INFMAP_VBSP_OFFSET, self.INFMAP_VBSP_CHUNK)
+	ent.INFMAP_VBSP = nil
 end
 
 -- infmap coordinates -> normal coordinates
@@ -116,7 +121,7 @@ local function check_ent(ent, chunk, prev_chunk)
 	ent.INFMAP_VBSP_CHECK = #check > 0 and check or nil
 end
 
-function ENT:SetVBSPChunk(chunk, pos)
+function ENT:SetVBSPChunk(chunk, pos) -- TODO: dynamic vbsps (this code sucks)
 	if pos then
 		self.INFMAP_VBSP_POS = pos
 	end
@@ -126,9 +131,13 @@ function ENT:SetVBSPChunk(chunk, pos)
 	self:Initialize()
 
 	for _, ent in ents.Iterator() do
-		if !ent:InChunk(chunk) then continue end
-
-		check_ent(ent, ent:GetChunk(), nil) -- SLOW
+		if ent:InChunk(chunk) then
+			check_ent(ent, ent:GetChunk(), nil) -- SLOW
+		else
+			if ent.INFMAP_VBSP == self then
+				self:StartTouch(ent)
+			end
+		end
 	end
 end
 
