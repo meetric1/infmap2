@@ -1,23 +1,25 @@
 -- R16 sampler
+local function get_data(metadata, res, x, y)
+	x = math.Clamp(x, 0, res - 1) -- clampU
+	y = math.Clamp(y, 0, res - 1) -- clampV
+
+	local i = (y * res + x) * 2 + 1 -- stride of 2 + lua is 1 indexed
+	return (
+		string.byte(metadata[i + 1]) * 2^8 + -- up << 8 + low
+		string.byte(metadata[i    ])
+	)
+end
+
 local INFMAP_SAMPLER_FUNCS = {
 	["sample"] = function(self, x, y, point)
-		x = (    x) * self.res
-		y = (1 - y) * self.res
-
-		local function get_data(x, y)
-			x = math.Clamp(x, 0, self.res - 1) -- clampU
-			y = math.Clamp(y, 0, self.res - 1) -- clampV
-
-			local i = (y * self.res + x) * 2 + 1 -- stride of 2 + lua is 1 indexed
-			return (
-				string.byte(self.metadata[i + 1]) * 2^8 + -- up << 8 + low
-				string.byte(self.metadata[i    ])
-			)
-		end
+		local metadata = self.metadata
+		local res = self.res
+		x = (    x) * res
+		y = (1 - y) * res
 
 		if point then
 			-- Point filtering
-			return get_data(x, y)
+			return get_data(metadata, res, x, y)
 		else
 			-- Bilinear filtering
 			local x_fract = x % 1
@@ -26,10 +28,11 @@ local INFMAP_SAMPLER_FUNCS = {
 			local y_offset = y_fract >= 0.5 and 1 or -1
 			local x_dist = math.abs(x_fract - 0.5)
 			local y_dist = math.abs(y_fract - 0.5)
-			local c00 = get_data(x,            y           )
-			local c10 = get_data(x + x_offset, y           )
-			local c01 = get_data(x           , y + y_offset)
-			local c11 = get_data(x + x_offset, y + y_offset)
+			local c00 = get_data(metadata, res, x,            y           )
+			local c10 = get_data(metadata, res, x + x_offset, y           )
+			local c01 = get_data(metadata, res, x           , y + y_offset)
+			local c11 = get_data(metadata, res, x + x_offset, y + y_offset)
+
 			return (
 				(c00 * (1 - x_dist) + c10 * x_dist) * (1 - y_dist) +
 				(c01 * (1 - x_dist) + c11 * x_dist) * (    y_dist)
