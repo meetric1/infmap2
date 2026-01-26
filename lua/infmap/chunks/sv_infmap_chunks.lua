@@ -2,13 +2,13 @@
 -- ENTITY WRAPPING --
 ---------------------
 -- which entities should be checked to be wrapped, per frame
-local check_ents = {}
+INFMAP.wrapped_ents = {}
 local function check_ent(ent)
 	if !INFMAP.filter_teleport(ent) then
-		check_ents[ent] = true
+		INFMAP.wrapped_ents[ent] = true
 		return true
 	else
-		check_ents[ent] = nil
+		INFMAP.wrapped_ents[ent] = nil
 		return false
 	end
 end
@@ -52,9 +52,10 @@ end)
 
 -- actual wrapping (teleporting)
 hook.Add("Think", "infmap_wrap", function()
-	for ent, _ in pairs(check_ents) do
+	local wrapped_ents = INFMAP.wrapped_ents
+	for ent, _ in pairs(wrapped_ents) do
 		if !IsValid(ent) then
-			check_ents[ent] = nil
+			wrapped_ents[ent] = nil
 			continue
 		end
 		
@@ -64,7 +65,7 @@ hook.Add("Think", "infmap_wrap", function()
 
 		-- time to teleport
 		local _, chunk = INFMAP.localize(ent:INFMAP_GetPos())
-		local offset = -INFMAP.unlocalize(vector_origin, chunk)
+		local offset = INFMAP.unlocalize(vector_origin, -chunk)
 		chunk = chunk + ent:GetChunk()
 
 		-- hook support (slow..)
@@ -72,14 +73,14 @@ hook.Add("Think", "infmap_wrap", function()
 		--if !err and prevent then continue end
 
 		-- teleport
-		INFMAP.set_constraint_pos(ent.INFMAP_CONSTRAINED, offset, chunk)
+		INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, offset, chunk)
 
 		-- if we're holding something, force it into our chunk
 		if ent:IsPlayer() then
 			local holding = player_pickups[ent]
 			if IsValid(holding) then
 				if validate_pickup(holding) then
-					INFMAP.set_constraint_pos(holding.INFMAP_CONSTRAINED, offset, chunk)
+					INFMAP.translate_constraints(holding.INFMAP_CONSTRAINED, offset, chunk)
 				end
 			end
 		end

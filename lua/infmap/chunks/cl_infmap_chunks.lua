@@ -3,13 +3,18 @@
 ---------------
 -- when bounding box is outside of world bounds the object isn't rendered
 -- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
+-- TODO: rotated renderbounds if IClientRenderable::RenderableToWorldTransform gets exposed
 -- TODO: NeedsDepthPass to set bounds, for RenderView "support"
 local force_renderbounds = {}
 hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 	for ent, _ in pairs(force_renderbounds) do
-		if !ent.INFMAP_RENDER_BOUNDS then continue end
+		local render_bounds = ent.INFMAP_RENDER_BOUNDS
+		if !render_bounds then 
+			force_renderbounds[ent] = nil
+			continue
+		end
 
-		-- calculate prop dir with minimal GC overhead
+		-- calculate prop dir
 		local dir = ent:INFMAP_GetPos()
 		dir:Add(ent.INFMAP_RENDER_OFFSET)
 		dir:Sub(eye_pos)
@@ -17,22 +22,22 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 		dir:Mul(shrink)
 
 		-- creates 2 vectors (fuck!)
-		local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
+		local min, max = ent:GetRotatedAABB(render_bounds[1], render_bounds[2])
 		min:Mul(shrink)
 		max:Mul(shrink)
 
 		-- redo renderbounds
 		dir:Add(eye_pos)
-
 		--debugoverlay.Box(dir, min, max, 0, Color(0, 255, 0, 0))
 
 		min:Add(dir)
 		max:Add(dir)
 		ent:INFMAP_SetRenderBoundsWS(min, max)
-
-		--local min, max = ent:GetRotatedAABB(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
-		--debugoverlay.Box(ent:INFMAP_GetPos(), min, max, 0, Color(255, 0, 255, 0))
 	end
+
+	local eye_ang = LocalPlayer():EyeAngles()
+	eye_ang[3] = eye_ang[3] * 0.9
+	LocalPlayer():SetEyeAngles(eye_ang)
 end)
 
 local function enable_render_offset(ent, chunk_offset)
@@ -74,10 +79,16 @@ local function enable_render_offset(ent, chunk_offset)
 	force_renderbounds[ent] = true
 end
 
-local function disable_render_offset(ent)
-	if ent.INFMAP_RENDER_BOUNDS then
-		ent:INFMAP_SetRenderBounds(ent.INFMAP_RENDER_BOUNDS[1], ent.INFMAP_RENDER_BOUNDS[2])
-		ent.INFMAP_RENDER_BOUNDS = nil
+local function disable_render_offset(ent, nodraw)
+	if nodraw then
+		ent.INFMAP_RENDER_BOUNDS = ent.INFMAP_RENDER_BOUNDS or {ent:INFMAP_GetRenderBounds()}
+		ent:INFMAP_SetRenderBounds(vector_origin, vector_origin)
+	else
+		local rb = ent.INFMAP_RENDER_BOUNDS
+		if rb then
+			ent:INFMAP_SetRenderBounds(rb[1], rb[2])
+			ent.INFMAP_RENDER_BOUNDS = nil
+		end
 	end
 
 	ent.CalcAbsolutePosition = nil
@@ -105,14 +116,31 @@ function ENTITY:SetChunk(chunk)
 
 	-- offset rendering (or dont. idc)
 	local local_player = LocalPlayer()
-	if !chunk or !local_player:IsChunkValid() or INFMAP.filter_render(self) then
+	if INFMAP.filter_render(self) then
 		disable_render_offset(self)
 	else
-		local chunk_offset = chunk - local_player:GetChunk()
-		if !chunk_offset:IsZero() then
-			enable_render_offset(self, chunk_offset)
+		if !chunk then
+			if local_player:IsChunkValid() then
+				-- ENT: Normal, PLY: Normal
+				disable_render_offset(self)
+			else
+				-- ENT: Normal, PLY: Infmap
+				disable_render_offset(self, true)
+			end
 		else
-			disable_render_offset(self)
+			if local_player:IsChunkValid() then
+				local chunk_offset = chunk - local_player:GetChunk()
+				if chunk_offset:IsZero() then
+					-- ENT: Infmap, PLY: Infmap (SAME CHUNK)
+					disable_render_offset(self)
+				else
+					-- ENT: Infmap, PLY: Infmap (DIFF CHUNK)
+					enable_render_offset(self, chunk_offset)
+				end
+			else
+				-- ENT: Infmap, PLY: Normal
+				disable_render_offset(self, true)
+			end
 		end
 	end
 
@@ -145,7 +173,7 @@ local function network_var_changed(ent, name, old, new, recurse)
 
 		return
 	end
-
+	
 	ent:SetChunk(INFMAP.decode_vector(new))
 end
 hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
@@ -193,7 +221,7 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 		local size = vbsp:GetVBSPSize()
 		render.DrawWireframeBox(
 			vbsp:GetPos(), 
-			Angle(), 
+			vbsp:GetAngles(),
 			-size, 
 			size, 
 			Color(0, 255, 0),

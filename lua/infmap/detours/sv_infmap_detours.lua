@@ -33,17 +33,23 @@ detour(ENTITY, "SetPos", function(self, pos)
 	end
 end, true)
 
-detour(ENTITY, "WorldSpaceAABB", function(self)
-	local mins, maxs = self:INFMAP_WorldSpaceAABB()
-	return INFMAP.unlocalize(mins, self:GetChunk()), INFMAP.unlocalize(maxs, self:GetChunk())
-end)
-
 detour(ENTITY, "LocalToWorld", function(self, pos)
 	return INFMAP.unlocalize(self:INFMAP_LocalToWorld(pos), self:GetChunk())
 end)
 
 detour(ENTITY, "WorldToLocal", function(self, pos)
 	return self:INFMAP_WorldToLocal(INFMAP.unlocalize(pos, -self:GetChunk()))
+end)
+
+detour(ENTITY, "GetWorldTransformMatrix", function(self)
+	local world_transform_matrix = self:INFMAP_GetWorldTransformMatrix()
+	world_transform_matrix:Translate(INFMAP.unlocalize(vector_origin, self:GetChunk()))
+	return world_transform_matrix
+end)
+
+detour(ENTITY, "WorldSpaceAABB", function(self)
+	local mins, maxs = self:INFMAP_WorldSpaceAABB()
+	return INFMAP.unlocalize(mins, self:GetChunk()), INFMAP.unlocalize(maxs, self:GetChunk())
 end)
 
 detour(ENTITY, "WorldSpaceCenter", function(self)

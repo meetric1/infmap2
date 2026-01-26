@@ -144,12 +144,13 @@ end
 
 -- we need filters, as there are a *lot* of weird exceptions
 -- blacklist of all the classes that are useless (never wrapped)
-INFMAP.class_filter = {
+INFMAP.filter_classes = {
 	["infmap"] = true,
 	["infmap_clone"] = true,
 	["infmap_vbsp"] = true,
 	["physgun_beam"] = true,
 	["worldspawn"] = true,
+	["gmod_hands"] = true,
 	["info_particle_system"] = true,
 	["phys_spring"] = true,
 	["predicted_viewmodel"] = true,
@@ -188,7 +189,7 @@ INFMAP.class_filter = {
 function INFMAP.filter_general(ent)
 	if ent:IsWorld() then return true end
 	if ent.IsConstraint and ent:IsConstraint() then return true end
-	if INFMAP.class_filter[ent:GetClass()] then return true end
+	if INFMAP.filter_classes[ent:GetClass()] then return true end
 
 	return false
 end
@@ -201,10 +202,12 @@ function INFMAP.filter_constraint_parsing(ent)
 end
 
 -- blacklist
-INFMAP.teleport_class_filter = {
+INFMAP.filter_teleport_classes = {
 	["rpg_missile"] = true,
 	["crossbow_bolt"] = true,
 	["prop_vehicle_jeep"] = true, -- super fucked
+	["infmap_vbsp_client"] = true,
+	["infmap_lod"] = true,
 }
 
 -- teleport filter - which objects shouldnt be wrapped?
@@ -213,7 +216,7 @@ function INFMAP.filter_teleport(ent, ignore)
 
 	if ent:IsPlayer() and !ent:Alive() then return true end
 	if ent.INFMAP_CONSTRAINED and (ent.INFMAP_CONSTRAINED.parent != ent) then return true end
-	if INFMAP.teleport_class_filter[ent:GetClass()] then return true end
+	if INFMAP.filter_teleport_classes[ent:GetClass()] then return true end
 
 	return INFMAP.filter_constraint_parsing(ent)
 end
@@ -222,8 +225,9 @@ end
 function INFMAP.filter_collision(ent)
 	if ent:IsPlayer() then return true end
 	if ent:BoundingRadius() < 10 then return true end -- no tiny props, too much compute
+	if INFMAP.filter_teleport_classes[ent:GetClass()] then return true end
 
-	return INFMAP.filter_teleport(ent)
+	return INFMAP.filter_general(ent)
 end
 
 -- renderer filter - which entities shouldnt be rendered?

@@ -12,6 +12,9 @@ function ENT:Think()
 	-- figure out where we are (which vbsp are we in?), set chunk (and position) accordingly
 	local vbsps = ents.FindByClass("infmap_vbsp")
 	for _, vbsp in ipairs(vbsps) do
+		local vbsp_client = vbsp.INFMAP_VBSP_CLIENT
+		if !vbsp_client then continue end
+
 		local vbsp_pos = vbsp:INFMAP_GetPos()
 		local vbsp_mins = vbsp:OBBMins()
 		local vbsp_maxs = vbsp:OBBMaxs()
@@ -20,8 +23,10 @@ function ENT:Think()
 
 		-- Ah! you Found it!
 		if INFMAP.aabb_intersect_aabb(pos, pos, vbsp_mins, vbsp_maxs) then
-			self:INFMAP_SetPos(pos - vbsp.INFMAP_VBSP_OFFSET)
-			self:SetChunk(vbsp.INFMAP_VBSP_CHUNK)
+			self:INFMAP_SetPos(INFMAP.VBSP.to_world(vbsp_client) * pos)
+			self:SetAngles(vbsp_client:GetAngles())
+			self:SetChunk(vbsp_client:GetChunk())
+			self:SetParent(vbsp_client)
 
 			break
 		end

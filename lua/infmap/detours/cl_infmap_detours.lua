@@ -26,13 +26,31 @@ detour(ENTITY, "GetPos", function(self)
 	return INFMAP.unlocalize(self:INFMAP_GetPos(), self:GetChunk() - LocalPlayer():GetChunk())
 end)
 
+detour(ENTITY, "WorldToLocal", function(self, pos)
+	return self:INFMAP_WorldToLocal(INFMAP.unlocalize(pos, LocalPlayer():GetChunk() - self:GetChunk()))
+end)
+
+detour(ENTITY, "LocalToWorld", function(self, pos)
+	return INFMAP.unlocalize(self:INFMAP_LocalToWorld(pos), self:GetChunk() - LocalPlayer():GetChunk())
+end)
+
+detour(ENTITY, "EyePos", function(self)
+	return INFMAP.unlocalize(self:INFMAP_EyePos(), self:GetChunk() - LocalPlayer():GetChunk())
+end)
+
+detour(ENTITY, "GetWorldTransformMatrix", function(self)
+	local world_transform_matrix = self:INFMAP_GetWorldTransformMatrix()
+	world_transform_matrix:Translate(INFMAP.unlocalize(vector_origin, self:GetChunk() - LocalPlayer():GetChunk()))
+	return world_transform_matrix
+end)
+
 detour(ENTITY, "GetRenderBounds", function(self)
 	if self.INFMAP_RENDER_BOUNDS then
 		return Vector(self.INFMAP_RENDER_BOUNDS[1]), Vector(self.INFMAP_RENDER_BOUNDS[2])
 	else
 		return self:INFMAP_GetRenderBounds()
 	end
-end)
+end, true)
 
 detour(ENTITY, "SetRenderBounds", function(self, mins, maxs, add)
 	if self.INFMAP_RENDER_BOUNDS then
@@ -45,13 +63,13 @@ detour(ENTITY, "SetRenderBounds", function(self, mins, maxs, add)
 	else
 		self:INFMAP_SetRenderBounds(mins, maxs, add)
 	end
-end)
+end, true)
 
 detour(ENTITY, "SetRenderBoundsWS", function(self, mins, maxs, add)
 	if self.INFMAP_RENDER_BOUNDS then
 		add = add or vector_origin
 
-		local inv_model_matrix = self:GetWorldTransformMatrix()
+		local inv_model_matrix = self:GetWorldTransformMatrix() -- DETOURED
 		inv_model_matrix:Invert()
 
 		mins = inv_model_matrix * (mins - add)
@@ -66,7 +84,7 @@ detour(ENTITY, "SetRenderBoundsWS", function(self, mins, maxs, add)
 	else
 		self:INFMAP_SetRenderBoundsWS(mins, maxs, add)
 	end
-end)
+end, true)
 
 -- really horrible RenderOverride detour
 detour(ENTITY, "__newindex", function(self, key, value)

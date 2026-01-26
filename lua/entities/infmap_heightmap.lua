@@ -6,21 +6,6 @@ ENT.PrintName = "infmap_heightmap"
 if !INFMAP then return end
 
 local RESOLUTION = 8
-local function get_chunk(ply)
-	local ply_chunk = ply:GetChunk()
-	if ply_chunk then 
-		return ply_chunk, vector_origin
-	end
-
-	local vbsp = ply:GetNWEntity("INFMAP_VBSP_CLIENT")
-	if IsValid(vbsp) then
-		local offset = vbsp:INFMAP_GetPos() - vbsp:GetVBSPPos()
-		return vbsp:GetChunk(), offset
-	else
-		return nil -- where the fuck are we..??
-	end
-end
-
 local function validate_tree(heightmap, tree)
 	if tree.metadata then return end
 
@@ -65,9 +50,10 @@ function ENT:KeyValue(key, value)
 	end
 end
 
-local heightmaps = {}
+local heightmaps = ents.FindByClass("infmap_heightmap")--{}
 function ENT:Initialize()
-	self:SetNoDraw(true)
+	--self:SetNoDraw(true)
+	self:SetNotSolid(true)
 
 	self.INFMAP_HEIGHTMAP_SAMPLER = INFMAP.Sampler("materials/" .. self:GetPath())
 	self.INFMAP_HEIGHTMAP_QUADTREE = INFMAP.Quadtree(Vector(), 393701) -- 10KM
@@ -79,6 +65,7 @@ function ENT:Initialize()
 		self.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT = CreateMaterial(mat_path .. "_vl", "VertexLitGeneric", {
 			["$basetexture"] = self.INFMAP_HEIGHTMAP_MATERIAL:GetString("$basetexture")
 		})
+		self:SetRenderBounds(Vector(), Vector(393701, 393701, 65536))
 	end
 end
 
@@ -86,33 +73,39 @@ end
 -- SERVER LOGIC --
 ------------------
 if SERVER then
-	local function traverse_collision(heightmap, tree, pos)
-		if !tree.colliders and tree.bottom and tree:should_split_pos(pos, 1, true) then
+	local function traverse_collision(heightmap, tree, local_pos)
+		if !tree.colliders and tree.bottom and tree:should_split_pos(local_pos, 1, true) then
 			tree.colliders = {}
 			validate_tree(heightmap, tree)
 
 			-- TODO: only spawn relevant chunks (for VERY steep slopes)
-			local _, chunk_min = INFMAP.localize(Vector(0, 0, tree.metadata.min))
-			local _, chunk_max = INFMAP.localize(Vector(0, 0, tree.metadata.max))
-			local pos, chunk_offset = INFMAP.localize(tree.pos)
-			chunk_offset = chunk_offset + heightmap:GetChunk()
-			for z = chunk_min[3], chunk_max[3] do
+			local world_pos = heightmap:INFMAP_GetPos()
+			for i = 1, 3 do world_pos[i] = world_pos[i] + tree.pos[i] end
+
+			local world_pos, world_chunk = INFMAP.localize(world_pos)
+			world_chunk = world_chunk + heightmap:GetChunk()
+
+			local _, chunk_min = INFMAP.localize(Vector(0, 0, world_pos[3] + tree.metadata.min))
+			local _, chunk_max = INFMAP.localize(Vector(0, 0, world_pos[3] + tree.metadata.max))
+			local bottom = world_chunk[3] + chunk_min[3]
+			local top = world_chunk[3] + chunk_max[3]
+			for z = bottom, top do
 				local collider = ents.Create("infmap_heightmap_collider")
 				collider:SetHeightmap(heightmap)
 				collider:SetPath(tree.path)
-				collider:SetChunk(chunk_offset + INFMAP.Vector(0, 0, z))
-				collider:INFMAP_SetPos(pos)
+				collider:SetChunk(world_chunk + INFMAP.Vector(0, 0, z))
+				collider:INFMAP_SetPos(world_pos)
 				collider:Spawn()
 				table.insert(tree.colliders, collider)
 			end
 		end
 
-		if tree:should_split_pos(pos, 0.5) then
+		if tree:should_split_pos(local_pos, 0.5) then
 			tree.curtime = CurTime()
 			tree:split()
 
 			for i = 1, 4 do
-				traverse_collision(heightmap, tree.children[i], pos)
+				traverse_collision(heightmap, tree.children[i], local_pos)
 			end
 		else
 			-- tree hasn't been visited in a while, invalidate it
@@ -133,16 +126,27 @@ if SERVER then
 
 	timer.Create("INFMAP_HEIGHTMAP", 0.1, 0, function()
 		for _, ply in player.Iterator() do
-			local ply_chunk, ply_offset = get_chunk(ply)
-			if !ply_chunk then continue end
+			local pos, chunk
+			if ply:IsChunkValid() then
+				pos = ply:INFMAP_GetPos()
+				chunk = ply:GetChunk()
+			else
+				local vbsp_client = ply:GetNWEntity("INFMAP_VBSP_CLIENT")
+				if !IsValid(vbsp_client) then
+					continue -- where the fuck are we?
+				end
 
-			local pos = ply:INFMAP_GetPos() 
-			pos:Add(ply_offset)
+				pos = INFMAP.VBSP.to_world(vbsp_client) * ply:INFMAP_EyePos()
+				chunk = vbsp_client:GetChunk()
+			end
+
+			if !chunk then continue end
+
 			for _, heightmap in ipairs(heightmaps) do
 				if !heightmap.INFMAP_HEIGHTMAP_SAMPLER or !heightmap.INFMAP_HEIGHTMAP_SAMPLER.metadata then continue end
 
-				local offset = INFMAP.unlocalize(pos, ply_chunk - heightmap:GetChunk())
-				traverse_collision(heightmap, heightmap.INFMAP_HEIGHTMAP_QUADTREE, offset)
+				local pos_local = INFMAP.unlocalize(pos - heightmap:INFMAP_GetPos(), chunk - heightmap:GetChunk())
+				traverse_collision(heightmap, heightmap.INFMAP_HEIGHTMAP_QUADTREE, pos_local)
 			end
 		end
 
@@ -254,47 +258,60 @@ local function traverse_render(heightmap, tree, pos)
 	end
 end
 
--- rendering
-local imesh_offset = Matrix()
-hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
-	local local_player = LocalPlayer()
-	local local_player_chunk, vbsp_offset = get_chunk(local_player)
-	if !local_player_chunk then return end
+function ENT:Draw()
+	-- meshes aren't ready yet
+	if !self.INFMAP_HEIGHTMAP_SAMPLER.metadata then return end
 
+	local quadtree = self.INFMAP_HEIGHTMAP_QUADTREE
+	local local_player = LocalPlayer()
+
+	-- figure out where to do LODs
+	local offset
+	if local_player:IsChunkValid() then
+		offset = INFMAP.unlocalize(
+			local_player:INFMAP_EyePos() - self:INFMAP_GetPos(), 
+			local_player:GetChunk() - self:GetChunk()
+		)
+	else
+		local vbsp_client = local_player:GetNWEntity("INFMAP_VBSP_CLIENT")
+		if !IsValid(vbsp_client) then
+			return -- where the fuck are we?
+		end
+
+		offset = INFMAP.unlocalize(
+			INFMAP.VBSP.to_world(vbsp_client) * local_player:INFMAP_EyePos(),
+			vbsp_client:GetChunk() - self:GetChunk()
+		)
+	end
+
+	cam.PushModelMatrix(self:GetWorldTransformMatrix())
+		render.OverrideDepthEnable(true, true)
+
+		--render.SetMaterial(Material("models/wireframe"))
+		--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
+		render.SetMaterial(self.INFMAP_HEIGHTMAP_MATERIAL)
+		traverse_render(self, quadtree, offset)
+
+		-- TODO: better flashlight
+		render.SetMaterial(self.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT)
+		render.RenderFlashlights(function()
+			traverse_render(self, quadtree, offset)
+		end)
+
+		render.OverrideDepthEnable(false, false)
+	cam.PopModelMatrix()
+
+	--local mins, maxs = self:INFMAP_GetRenderBounds()
+	--debugoverlay.Box(self:INFMAP_GetPos(), mins, maxs, 0.1, Color(255, 0, 255, 0))
+end
+
+-- rendering
+hook.Add("PostDrawOpaqueRenderables", "infmap_heightmap", function(_, _, sky3d)
 	-- build heightmap (if applicable)
 	local new_tree = imesh_queue:remove()
 	if new_tree then
 		validate_tree(new_tree[1], new_tree[2])
 		generate_tree(new_tree[1], new_tree[2])
 		--print("mesh generation with " .. RESOLUTION .. " points took " .. (SysTime() - s) * 1000 .. "ms")
-	end
-
-	-- render heightmaps
-	local eye_pos = local_player:EyePos()
-	for _, heightmap in ipairs(heightmaps) do
-		if !heightmap.INFMAP_HEIGHTMAP_SAMPLER.metadata then continue end
-
-		local quadtree = heightmap.INFMAP_HEIGHTMAP_QUADTREE
-		local offset = INFMAP.unlocalize(quadtree.pos, local_player_chunk - heightmap:GetChunk())
-		offset:Add(vbsp_offset)
-		imesh_offset:SetTranslation(-offset)
-		offset:Add(eye_pos)
-		
-		cam.PushModelMatrix(imesh_offset)
-			render.OverrideDepthEnable(true, true)
-
-			-- TODO: cache materials
-			--render.SetMaterial(Material("models/wireframe"))
-			--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
-			render.SetMaterial(heightmap.INFMAP_HEIGHTMAP_MATERIAL)
-			traverse_render(heightmap, quadtree, offset)
-
-			render.SetMaterial(heightmap.INFMAP_HEIGHTMAP_MATERIAL_FLASHLIGHT)
-			render.RenderFlashlights(function()
-				traverse_render(heightmap, quadtree, offset)
-			end)
-
-			render.OverrideDepthEnable(false, false)
-		cam.PopModelMatrix()
 	end
 end)
