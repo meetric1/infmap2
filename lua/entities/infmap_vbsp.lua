@@ -58,7 +58,8 @@ function ENT:Initialize()
 end
 
 function ENT:StartTouch(ent)
-	--if !ent:IsPlayer() then return end
+	if !ent:IsPlayer() then return end
+	
 	ent:SetNWEntity("INFMAP_VBSP_CLIENT", self.INFMAP_VBSP_CLIENT)
 end
 
@@ -87,6 +88,7 @@ function ENT:Think()
 	local mins = self.INFMAP_VBSP_MINS
 	local maxs = self.INFMAP_VBSP_MAXS
 
+	-- TODO: INFMAP_VBSP_CHECK on entities instead of per-frame check
 	for ent, _ in pairs(INFMAP.wrapped_ents) do
 		if !ent:InChunk(self.INFMAP_VBSP_CHUNK) then continue end
 

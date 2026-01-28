@@ -126,22 +126,10 @@ if SERVER then
 
 	timer.Create("INFMAP_HEIGHTMAP", 0.1, 0, function()
 		for _, ply in player.Iterator() do
-			local pos, chunk
-			if ply:IsChunkValid() then
-				pos = ply:INFMAP_GetPos()
-				chunk = ply:GetChunk()
-			else
-				local vbsp_client = ply:GetNWEntity("INFMAP_VBSP_CLIENT")
-				if !IsValid(vbsp_client) then
-					continue -- where the fuck are we?
-				end
-
-				pos = INFMAP.VBSP.to_world(vbsp_client) * ply:INFMAP_EyePos()
-				chunk = vbsp_client:GetChunk()
-			end
-
+			local chunk = ply:GetChunk()
 			if !chunk then continue end
 
+			local pos = ply:INFMAP_GetPos()
 			for _, heightmap in ipairs(heightmaps) do
 				if !heightmap.INFMAP_HEIGHTMAP_SAMPLER or !heightmap.INFMAP_HEIGHTMAP_SAMPLER.metadata then continue end
 
