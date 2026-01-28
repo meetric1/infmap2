@@ -102,9 +102,9 @@ function ENT:Think()
 	end
 
 	--self:SetVBSPAngles(Angle(0, 45, 180))
-	self:SetVBSPAngles(Angle(CurTime() * 10, CurTime() * 20, CurTime() * 30))
-	self:NextThink(CurTime())
-	return true
+	self:SetVBSPAngles(Angle(CurTime() * 1, CurTime() * 2, CurTime() * 3))
+	--self:NextThink(CurTime())
+	--return true
 end
 
 hook.Add("OnChunkUpdate", "infmap_vbsp", function(ent, chunk, prev_chunk)

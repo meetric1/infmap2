@@ -34,10 +34,6 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 		max:Add(dir)
 		ent:INFMAP_SetRenderBoundsWS(min, max)
 	end
-
-	local eye_ang = LocalPlayer():EyeAngles()
-	eye_ang[3] = eye_ang[3] * 0.9
-	LocalPlayer():SetEyeAngles(eye_ang)
 end)
 
 local function enable_render_offset(ent, chunk_offset)

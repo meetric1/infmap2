@@ -22,7 +22,7 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 
 				-- player (use eye angles instead)
 				ang_mat:Rotate(ent:EyeAngles())
-				local ang = ang_mat:GetAngles()-- ang[3] = 0
+				local ang = ang_mat:GetAngles() ang[3] = 0
 				ent:SetEyeAngles(ang)
 			else
 				-- correct velocity
