@@ -11,7 +11,7 @@ function ENTITY:GetChunkInternal()
 end
 
 function ENTITY:SetChunkInternal(vec)
-	self:GetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(vec))
+	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(vec))
 end
 
 function ENTITY:IsChunkValid()
