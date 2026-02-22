@@ -143,7 +143,7 @@ function ENTITY:SetChunk(chunk)
 		chunk = INFMAP.Vector(chunk) -- copy
 	end
 	
-	self:SetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(chunk))
+	self:SetChunkInternal(chunk)
 	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
 	INFMAP.update_cross_chunk_collision(self)

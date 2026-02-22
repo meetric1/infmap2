@@ -258,7 +258,7 @@ end
 -- safe hook call, for easy API implementation
 -- will throw error, but does not halt infmap codebase
 function INFMAP.hook_run_safe(hook_name, ...)
-	local succ, ret = pcall(function(...) hook.Run(hook_name, ...) end, ...)
+	local succ, ret = pcall(function(...) return hook.Run(hook_name, ...) end, ...)
 	local err = !succ
 
 	if err then

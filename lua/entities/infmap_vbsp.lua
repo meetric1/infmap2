@@ -60,7 +60,7 @@ end
 function ENT:StartTouch(ent)
 	if !ent:IsPlayer() then return end
 	
-	ent:SetNWEntity("INFMAP_VBSP_CLIENT", self.INFMAP_VBSP_CLIENT)
+	ent:SetNW2Entity("INFMAP_VBSP_CLIENT", self.INFMAP_VBSP_CLIENT)
 end
 
 -- VBSP -> INFMAP
@@ -72,15 +72,17 @@ function ENT:EndTouch(ent)
 
 	if ent:IsPlayer() then 
 		ent:DropObject()
+		ent:SetNW2Entity("INFMAP_VBSP_CLIENT", NULL)
 	end
 
 	-- project to infmap, localize to relevant chunk (incase vbsp intersects a chunk border)
 	local translation = INFMAP.VBSP.to_world(self.INFMAP_VBSP_CLIENT)
-	local _, chunk_offset = INFMAP.localize(translation * ent:INFMAP_GetPos())
-	local translation_offset = Matrix()
-	translation_offset:SetTranslation(INFMAP.unlocalize(vector_origin, -chunk_offset))
-	translation_offset:Mul(translation)
-	INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, translation_offset, self.INFMAP_VBSP_CHUNK + chunk_offset)
+	--local _, chunk_offset = INFMAP.localize(translation * ent:INFMAP_GetPos())
+	--local translation_offset = Matrix()
+	--translation_offset:SetTranslation(INFMAP.unlocalize(vector_origin, -chunk_offset))
+	--translation_offset:Mul(translation)
+	--INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, translation_offset, self.INFMAP_VBSP_CHUNK + chunk_offset)
+	INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, translation, self.INFMAP_VBSP_CHUNK)
 end
 
 -- INFMAP -> VBSP
@@ -103,8 +105,8 @@ function ENT:Think()
 		INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, INFMAP.VBSP.to_local(vbsp_client), nil)
 	end
 
-	--self:SetVBSPAngles(Angle(0, 45, 180))
-	self:SetVBSPAngles(Angle(CurTime() * 1, CurTime() * 2, CurTime() * 3))
+	self:SetVBSPAngles(Angle(0, CurTime(), 0))
+	--self:SetVBSPAngles(Angle(CurTime() * 1, CurTime() * 2, CurTime() * 3))
 	--self:NextThink(CurTime())
 	--return true
 end

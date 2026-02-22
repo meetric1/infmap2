@@ -6,6 +6,14 @@ function ENTITY:GetChunk()
 	return self.INFMAP_CHUNK and INFMAP.Vector(self.INFMAP_CHUNK) or nil
 end
 
+function ENTITY:GetChunkInternal()
+	return INFMAP.decode_vector(self:GetNW2String("INFMAP_CHUNK"))
+end
+
+function ENTITY:SetChunkInternal(vec)
+	self:GetNW2String("INFMAP_CHUNK", INFMAP.encode_vector(vec))
+end
+
 function ENTITY:IsChunkValid()
 	return self.INFMAP_CHUNK != nil
 end

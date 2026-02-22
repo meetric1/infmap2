@@ -59,8 +59,54 @@ function ENT:Initialize()
 	self.INFMAP_VBSP_CHECK = {}
 end
 
+-- visuals- no server
+if SERVER then return end
+
+-- VBSP -> INFMAP
+local rendering = false
+local framebuffer = GetRenderTarget("infmap_vbsp_framebuffer", ScrW(), ScrH())
+local view = {
+	drawviewmodel = false,
+	viewid = 1 -- VIEW_3DSKY
+}
+
+hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
+	if !util.IsSkyboxVisibleFromPoint(eye_pos) then return end
+
+	local local_player = LocalPlayer()
+	local vbsp_client = local_player:GetNW2Entity("INFMAP_VBSP_CLIENT")
+	if !IsValid(vbsp_client) then return end
+	--print(vbsp_client)
+
+	if local_player:GetChunkInternal() == nil and local_player:GetChunk() != vbsp_client:GetChunk() then
+		local_player:SetChunk(vbsp_client:GetChunk())
+	end
+
+	local mat = INFMAP.VBSP.to_world(vbsp_client)
+	eye_pos:Mul(mat)
+	view.origin = eye_pos
+	view.angles = INFMAP.VBSP.rotate(mat, eye_angles)
+	view.fov    = fov
+
+	render.PushRenderTarget(framebuffer)
+		rendering = true
+		INFMAP.draw_render_bounds(eye_pos)
+		render.RenderView(view)
+		rendering = false
+	render.PopRenderTarget()
+end)
+
+hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
+	local vbsp_client = LocalPlayer():GetNW2Entity("INFMAP_VBSP_CLIENT")
+	if !IsValid(vbsp_client) then return end
+
+	render.DrawTextureToScreen(framebuffer)
+end)
+
 -- INFMAP -> VBSP
 function ENT:Draw()
+	if rendering then return end
+
 	local local_player = LocalPlayer()
 	if !local_player:IsChunkValid() then return end
 
@@ -85,69 +131,3 @@ function ENT:Draw()
 
 	--self:DrawModel()
 end
-
--- VBSP -> INFMAP
--- Skybox doesn't change orientation, so we need to draw it manually ourselves
-local sky_convar = GetConVar("sv_skyname")
-local sky_name = nil
-local sky_materials = {}
-local sky_directions = {
-	Vector(-1,  0,  0),
-	Vector( 1,  0,  0),
-	Vector( 0, -1,  0),
-	Vector( 0,  1,  0),
-	Vector( 0,  0, -1),
-	Vector( 0,  0,  1),
-}
-
-local function update_sky()
-	local new_sky_name = sky_convar:GetString()
-	if sky_name == new_sky_name then return end
-	sky_name = new_sky_name
-
-	local prefix = "skybox/" .. sky_name
-	sky_materials[1] = Material(prefix .. "rt")
-	sky_materials[2] = Material(prefix .. "lf")
-	sky_materials[3] = Material(prefix .. "bk")
-	sky_materials[4] = Material(prefix .. "ft")
-	sky_materials[5] = Material(prefix .. "up")
-	sky_materials[6] = Material(prefix .. "dn")
-end
-
-local function draw_sky()
-	for i, dir in ipairs(sky_directions) do
-		render.SetMaterial(sky_materials[i])
-		--render.SetMaterial(Material("hunter/myplastic"))
-		render.DrawQuadEasy(EyePos() - dir * 9.96, dir, 20, 20, color_white, i >= 5 and 0 or 180)
-	end
-end
-
-hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
-	local local_player = LocalPlayer()
-	if local_player:IsChunkValid() then return end
-
-	local vbsp_client = local_player:GetNWEntity("INFMAP_VBSP_CLIENT")
-	if !IsValid(vbsp_client) then return end
-
-	local to_world = INFMAP.VBSP.to_world(vbsp_client)
-	local offset_ang = INFMAP.VBSP.rotate(Matrix(to_world), EyeAngles())
-	cam.Start3D(nil, offset_ang)
-		update_sky()
-		draw_sky()
-	cam.End3D()
-
-	for _, ent in ents.Iterator() do
-		if ent:IsDormant() or INFMAP.filter_render(ent) or INFMAP.filter_teleport(ent) then
-			continue
-		end
-
-		local offset_pos = INFMAP.unlocalize(
-			to_world * EyePos(),
-			vbsp_client:GetChunk() - ent:GetChunk()
-		)
-
-		cam.Start3D(offset_pos, offset_ang)
-			ent:DrawModel()
-		cam.End3D()
-	end
-end)

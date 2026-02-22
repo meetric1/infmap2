@@ -4,9 +4,11 @@
 -- when bounding box is outside of world bounds the object isn't rendered
 -- to combat this we locally "shrink" the bounds so they are right infront of the players eyes
 -- TODO: rotated renderbounds if IClientRenderable::RenderableToWorldTransform gets exposed
--- TODO: NeedsDepthPass to set bounds, for RenderView "support"
 local force_renderbounds = {}
-hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
+function INFMAP.draw_render_bounds(eye_pos)
+	local err, prevent = INFMAP.hook_run_safe("PreDrawRenderBounds")
+	if !err and prevent then return end
+
 	for ent, _ in pairs(force_renderbounds) do
 		local render_bounds = ent.INFMAP_RENDER_BOUNDS
 		if !render_bounds then 
@@ -34,7 +36,9 @@ hook.Add("RenderScene", "infmap_renderbounds", function(eye_pos, eye_ang, fov)
 		max:Add(dir)
 		ent:INFMAP_SetRenderBoundsWS(min, max)
 	end
-end)
+end
+
+hook.Add("RenderScene", "infmap_draw_render_bounds", INFMAP.draw_render_bounds)
 
 local function enable_render_offset(ent, chunk_offset)
 	-- visually offset entity
@@ -234,9 +238,10 @@ hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
 		)
 	end
 
+	--[[
 	for _, heightmap in ipairs(ents.FindByClass("infmap_heightmap_collider")) do
 		render.DrawWireframeBox(heightmap:GetPos(), Angle(), heightmap:OBBMins(), heightmap:OBBMaxs(), Color(255, 127, 0), true)
-	end
+	end]]
 
 	cam.Start2D()
 		draw.DrawText("client chunk: " .. concat_vector(lp.INFMAP_CHUNK), "TargetID", nil, 130)
