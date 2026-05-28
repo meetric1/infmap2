@@ -67,7 +67,7 @@ local rendering = false
 local framebuffer = GetRenderTarget("infmap_vbsp_framebuffer", ScrW(), ScrH())
 local view = {
 	drawviewmodel = false,
-	viewid = 1 -- VIEW_3DSKY
+	--viewid = 1 -- VIEW_3DSKY
 }
 
 hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
@@ -87,6 +87,16 @@ hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
 	view.origin = eye_pos
 	view.angles = INFMAP.VBSP.rotate(mat, eye_angles)
 	view.fov    = fov
+
+	-- DEPTH IS BROKEN INSIDE VIRTUAL CAMERA
+	-- this BREAKS planet atmosphere rendering
+	-- TODO: better way to read depth (INTZ?)
+	-- VIEWID = 0 fixes this issue, but breaks pixvis handles. Wtf
+	--[[
+	render.PushRenderTarget(render.GetResolvedFullFrameDepth())
+		render.Clear(0, 0, 0, 0)
+	render.PopRenderTarget()
+	]]
 
 	render.PushRenderTarget(framebuffer)
 		rendering = true

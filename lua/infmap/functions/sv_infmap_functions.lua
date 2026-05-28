@@ -52,7 +52,7 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 		end
 	end
 
-	-- force drop, for the rare case where 2 players are holding the same object
+	-- force drop, in the rare case two players are holding the same object
 	local ent_chunk = ent:GetChunk()
 	for _, ply in player.Iterator() do
 		if !ply:InChunk(ent_chunk) then

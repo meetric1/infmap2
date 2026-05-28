@@ -191,7 +191,7 @@ local function concat_vector(v)
 	return string.format("%i %i %i", v[1], v[2], v[3])
 end
 
-hook.Add("PostDrawOpaqueRenderables", "infmap_debug", function()
+hook.Add("PostDrawTranslucentRenderables", "infmap_debug", function()
 	if !debug_enabled:GetBool() then return end
 
 	local lp = LocalPlayer()
