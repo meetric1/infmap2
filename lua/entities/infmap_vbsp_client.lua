@@ -35,7 +35,8 @@ INFMAP.VBSP = {
 	["rotate"] = function(mat, ang)
 		mat:Rotate(ang)
 		return mat:GetAngles()
-	end
+	end,
+	["rendering"] = false
 }
 
 function ENT:SetupDataTables()
@@ -63,11 +64,11 @@ end
 if SERVER then return end
 
 -- VBSP -> INFMAP
-local rendering = false
 local framebuffer = GetRenderTarget("infmap_vbsp_framebuffer", ScrW(), ScrH())
 local view = {
 	drawviewmodel = false,
-	--viewid = 1 -- VIEW_3DSKY
+	--viewid = 1, -- VIEW_3DSKY
+	--zfar = 999999
 }
 
 hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
@@ -99,10 +100,10 @@ hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
 	]]
 
 	render.PushRenderTarget(framebuffer)
-		rendering = true
+		INFMAP.VBSP.rendering = true
 		INFMAP.draw_render_bounds(eye_pos)
 		render.RenderView(view)
-		rendering = false
+		INFMAP.VBSP.rendering = false
 	render.PopRenderTarget()
 end)
 
@@ -115,7 +116,7 @@ end)
 
 -- INFMAP -> VBSP
 function ENT:Draw()
-	if rendering then return end
+	if INFMAP.VBSP.rendering then return end
 
 	local local_player = LocalPlayer()
 	if !local_player:IsChunkValid() then return end

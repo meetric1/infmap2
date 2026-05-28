@@ -34,3 +34,13 @@ function ENT:Think()
 
 	self:AddEFlags(EFL_NO_THINK_FUNCTION)
 end
+
+function ENT:Draw()
+	-- if our virtual camera is rendering, don't draw the LOD its situated in
+	if INFMAP.VBSP.rendering then 
+		local vbsp_client = LocalPlayer():GetNW2Entity("INFMAP_VBSP_CLIENT")
+		if self:GetParent() == vbsp_client then return end 
+	end
+
+	self:DrawModel()
+end
