@@ -84,27 +84,28 @@ hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
 	end
 
 	local mat = INFMAP.VBSP.to_world(vbsp_client)
-	eye_pos:Mul(mat)
-	view.origin = eye_pos
+	view.origin = mat * eye_pos
 	view.angles = INFMAP.VBSP.rotate(mat, eye_angles)
 	view.fov    = fov
 
-	-- DEPTH IS BROKEN INSIDE VIRTUAL CAMERA
-	-- this BREAKS planet atmosphere rendering
-	-- TODO: better way to read depth (INTZ?)
-	-- VIEWID = 0 fixes this issue, but breaks pixvis handles. Wtf
-	--[[
-	render.PushRenderTarget(render.GetResolvedFullFrameDepth())
-		render.Clear(0, 0, 0, 0)
-	render.PopRenderTarget()
-	]]
-
 	render.PushRenderTarget(framebuffer)
 		INFMAP.VBSP.rendering = true
-		INFMAP.draw_render_bounds(eye_pos)
+		INFMAP.draw_render_bounds(view.origin)
 		render.RenderView(view)
 		INFMAP.VBSP.rendering = false
 	render.PopRenderTarget()
+
+	-- To avoid corrupting pix-vis handles, we pretend our main view is rendering as a monitor
+	-- I anticipate this may cause issues later on
+	render.RenderView({
+		viewid = 2,
+		drawhud = true,
+		drawviewmodel = true,
+		origin = eye_pos,
+		angles = eye_angles,
+		fov = fov,
+	})
+	return true
 end)
 
 hook.Add("PostDraw2DSkyBox", "infmap_vbsp_client", function()
