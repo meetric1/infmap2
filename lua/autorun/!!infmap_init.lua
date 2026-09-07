@@ -55,9 +55,9 @@ local function load_folder(dir)
 				AddCSLuaFile(dir .. f)
 			end
 
-			if  (           prefix == "sh") or 
+			if  (           prefix == "sh") or
 				(SERVER and prefix == "sv") or
-				(CLIENT and prefix == "cl") 
+				(CLIENT and prefix == "cl")
 			then
 				include(dir .. f)
 			end

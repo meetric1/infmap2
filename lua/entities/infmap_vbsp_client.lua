@@ -125,7 +125,7 @@ function ENT:Draw()
 	-- all entities in here SHOULD have invalid chunks
 	local size = self:GetVBSPSize()
 	local vbsp_pos = self:GetVBSPPos()
-	local vbsp_ang = self:GetAngles()
+	--local vbsp_ang = self:GetAngles()
 	local force_draw = ents.FindInBox(vbsp_pos - size, vbsp_pos + size) -- TODO: slow
 
 	local to_local = INFMAP.VBSP.to_local(self)
@@ -134,7 +134,7 @@ function ENT:Draw()
 	cam.Start3D(offset_pos, offset_ang)
 	for _, ent in ipairs(force_draw) do
 		if INFMAP.filter_render(ent, true) then continue end
-		
+
 		ent:DrawModel()
 	end
 	cam.End3D()

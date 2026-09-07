@@ -12,6 +12,7 @@ ENT.Author			= "Meetric"
 ENT.Purpose			= ""
 ENT.Instructions	= ""
 ENT.Spawnable		= false
+ENT.PhysgunDisabled = true
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "ReferenceParent")
@@ -28,7 +29,7 @@ function ENT:InitializePhysics(parent)
 
 	local parent_phys_old = self.INFMAP_REFERENCE_PARENT_PHYSOBJ
 	if IsValid(parent_phys_old) and parent_phys_old == parent_phys then return end
-	
+
 	-- time to revalidate..
 	if CLIENT or custom_collisions_enabled(parent) then
 		local convexes = parent_phys:GetMesh()
@@ -39,7 +40,7 @@ function ENT:InitializePhysics(parent)
 			self:PhysicsDestroy()
 		end
 	end
-	
+
 	self.INFMAP_REFERENCE_PARENT_PHYSOBJ = parent_phys
 end
 
@@ -80,15 +81,9 @@ end
 
 function ENT:Think()
 	self:UpdatePhysics()
-	
+
 	if CLIENT then -- less updates.. not per frame
 		self:SetNextClientThink(CurTime() + 1 / 4)
 		return true
 	end
 end
-
-hook.Add("PhysgunPickup", "infmap_clone_disablepickup", function(_, ent)
-	if ent:GetClass() == "infmap_clone" then
-		return false 
-	end
-end)

@@ -76,11 +76,11 @@ detour(VEHICLE, "SetPos", ENTITY.SetPos, true)
 -- CONSTRAINT DETOURS --
 ------------------------
 local constraint_localize = {
-	"attachpoint", 
-	"springaxis", 
-	"slideaxis", 
-	"hingeaxis", 
-	"axis", 
+	"attachpoint",
+	"springaxis",
+	"slideaxis",
+	"hingeaxis",
+	"axis",
 	"position2"
 }
 
@@ -98,25 +98,25 @@ detour(ENTITY, "SetPhysConstraintObjects", function(self, phys1, phys2)
 end, true)
 
 detour(ENTITY, "Spawn", function(self)
-	if !self.INFMAP_PHYS_CONSTRAINT_OBJECTS then 
+	if !self.INFMAP_PHYS_CONSTRAINT_OBJECTS then
 		self:INFMAP_Spawn()
 		return
 	end
 
 	-- STOP!!! we're about to create a constraint with 2 entities, we need to localize all the data
 	local ent1, ent2 = self.INFMAP_PHYS_CONSTRAINT_OBJECTS[1], self.INFMAP_PHYS_CONSTRAINT_OBJECTS[2]
-	
+
 	-- localize prop locations
-	INFMAP.validate_constraints(ent1)
-	INFMAP.validate_constraints(ent2)
-	INFMAP.merge_constraints(ent1, ent2)
+	INFMAP.validate_system(ent1)
+	INFMAP.validate_system(ent2)
+	INFMAP.merge_system(ent1.INFMAP_CONSTRAINED, ent2.INFMAP_CONSTRAINED)
 
 	-- Localize constraint data
 	if self:IsChunkValid() then
 		self:INFMAP_SetPos(INFMAP.unlocalize(self:INFMAP_GetPos(), self:GetChunk() - ent1:GetChunk()))
 
 		local keys = self:GetKeyValues()
-		local chunk_offset = -ent1:GetChunk() -- constraints are localized around ent1
+		local chunk_offset = -ent1:GetChunk() -- system is localized around ent1
 		for _, str in ipairs(constraint_localize) do
 			local pos = keys[str]
 			if pos then
@@ -125,7 +125,7 @@ detour(ENTITY, "Spawn", function(self)
 			end
 		end
 	end
-	
+
 	-- Spawn
 	self:INFMAP_Spawn()
 end, true)
@@ -205,14 +205,14 @@ end)
 local function detour_filter(filter, start_chunk)
 	local new_filter = nil
 
-	if isfunction(filter) then 
+	if isfunction(filter) then
 		new_filter = function(e)
 			return e:GetChunk() == start_chunk and filter(e)
 		end
 	elseif istable(filter) then
 		local lookup = {}
-		for _, e in ipairs(filter) do 
-			lookup[e] = true 
+		for _, e in ipairs(filter) do
+			lookup[e] = true
 		end
 
 		new_filter = function(e)
@@ -293,7 +293,7 @@ hook.Add("Initialize", "infmap_wire_detour", function()
 
 	if SF and string.find(SF.Version, "Neostarfall") then -- neosf unclamp
 		function SF.clampPos(pos)
-			return pos 
+			return pos
 		end
 	end
 end)

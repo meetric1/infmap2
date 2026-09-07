@@ -15,7 +15,7 @@ end
 
 -- physgun support
 local function validate_pickup(ent)
-	INFMAP.validate_constraints(ent)
+	INFMAP.validate_system(ent)
 
 	if ent.INFMAP_CONSTRAINED then
 		ent.INFMAP_CONSTRAINED.parent = ent
@@ -32,7 +32,7 @@ local function player_pickup(ply, ent) -- key = player, value = prop
 	validate_pickup(ent)
 end
 
-local function player_drop(ply, ent) 
+local function player_drop(ply, ent)
 	player_pickups[ply] = nil
 end
 
@@ -58,9 +58,9 @@ hook.Add("Think", "infmap_wrap", function()
 			wrapped_ents[ent] = nil
 			continue
 		end
-		
+
 		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() then continue end
-		INFMAP.validate_constraints(ent)
+		INFMAP.validate_system(ent)
 		if !check_ent(ent) then continue end
 
 		-- time to teleport
@@ -73,14 +73,14 @@ hook.Add("Think", "infmap_wrap", function()
 		--if !err and prevent then continue end
 
 		-- teleport
-		INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, offset, chunk)
+		INFMAP.translate_system(ent.INFMAP_CONSTRAINED, offset, chunk)
 
 		-- if we're holding something, force it into our chunk
 		if ent:IsPlayer() then
 			local holding = player_pickups[ent]
 			if IsValid(holding) then
 				if validate_pickup(holding) then
-					INFMAP.translate_constraints(holding.INFMAP_CONSTRAINED, offset, chunk)
+					INFMAP.translate_system(holding.INFMAP_CONSTRAINED, offset, chunk)
 				end
 			end
 		end
@@ -96,12 +96,12 @@ hook.Add("EntityRemoved", "infmap_constraint", function(ent)
 
 	for _, e in ipairs({ent.Ent1, ent.Ent2}) do
 		if !IsValid(e) then continue end
-		
-		local constraints = e.INFMAP_CONSTRAINED
-		if !constraints then continue end -- duh, already invalid
-		
-		-- invalidate constraints
-		for _, e in ipairs(constraints) do
+
+		local system = e.INFMAP_CONSTRAINED
+		if !system then continue end -- duh, already invalid
+
+		-- invalidate system
+		for _, e in ipairs(system) do
 			e.INFMAP_CONSTRAINED = nil
 			check_ent(e)
 		end
@@ -142,7 +142,7 @@ function ENTITY:SetChunk(chunk)
 	if chunk != nil then
 		chunk = INFMAP.Vector(chunk) -- copy
 	end
-	
+
 	self:SetChunkInternal(chunk)
 	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
@@ -152,7 +152,7 @@ function ENTITY:SetChunk(chunk)
 	-- parent support (recursive)
 	for _, ent in ipairs(self:GetChildren()) do
 		if INFMAP.filter_general(ent) then continue end
-		
+
 		ent:SetChunk(chunk)
 	end
 end

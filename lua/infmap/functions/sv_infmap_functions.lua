@@ -10,14 +10,14 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 			-- setup rotation matrix
 			local ang_mat = Matrix()
 			ang_mat:SetAngles(translation_angles)
-			
+
 			-- translate real angle
 			if ent:IsPlayer() then
 				-- correct velocity
 				-- "If applied to a player, this will actually ADD velocity"
 				local old_vel = ent:GetVelocity()
 				old_vel:Mul(ang_mat)
-				old_vel:Sub(ent:GetVelocity()) 
+				old_vel:Sub(ent:GetVelocity())
 				ent:SetVelocity(old_vel)
 
 				-- player (use eye angles instead)
@@ -26,9 +26,9 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 				ent:SetEyeAngles(ang)
 			else
 				-- correct velocity
-				if old_vel and old_angvel then
+				if old_vel then
 					old_vel:Mul(ang_mat)
-					old_angvel:Mul(ang_mat)
+					--old_angvel:Mul(ang_mat) -- angvel is already local
 				end
 
 				-- entity
@@ -37,10 +37,10 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 				ent:SetAngles(ang)
 			end
 		end
-		
+
 		-- translate position
 		-- !!!WARNING!!! clamp_pos can cause undefined behavior with constraints
-		local pos = ent:INFMAP_GetPos() 
+		local pos = ent:INFMAP_GetPos()
 		pos:Mul(translation)
 		ent:INFMAP_SetPos(INFMAP.clamp_pos(pos))
 
@@ -61,12 +61,12 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 	end
 end
 
-function INFMAP.translate_constraints(system, translation, chunk)
+local translation_matrix = Matrix()
+function INFMAP.translate_system(system, translation, chunk)
 	-- old comapat
 	if isvector(translation) then
-		local t = translation
-		translation = Matrix()
-		translation:SetTranslation(t)
+		translation_matrix:SetTranslation(translation)
+		translation = translation_matrix
 	end
 
 	-- save old velocities
@@ -86,26 +86,24 @@ function INFMAP.translate_constraints(system, translation, chunk)
 	end
 end
 
--- merges 2 contraptions into the same chunk (ent1 -> ent2)
-function INFMAP.merge_constraints(ent1, ent2)
-	local ent1_constraints = ent1.INFMAP_CONSTRAINED
-	local ent2_constraints = ent2.INFMAP_CONSTRAINED
-	if !ent1_constraints or !ent2_constraints or ent1_constraints == ent2_constraints then 
+-- merges 2 systems into the same chunk (ent1 -> ent2)
+function INFMAP.merge_system(ent1_system, ent2_system)
+	if !ent1_system or !ent2_system or ent1_system == ent2_system then
 		return false
 	end
-	
+
 	-- merge systems
-	for _, e in ipairs(ent1_constraints) do
-		table.insert(ent2_constraints, e)
-		e.INFMAP_CONSTRAINED = ent2_constraints
+	for _, e in ipairs(ent1_system) do
+		table.insert(ent2_system, e)
+		e.INFMAP_CONSTRAINED = ent2_system
 	end
 
 	-- localize old system into new
-	local ent1_chunk = ent1:GetChunk()
-	local ent2_chunk = ent2:GetChunk()
+	local ent1_chunk = ent1_system.parent:GetChunk()
+	local ent2_chunk = ent2_system.parent:GetChunk()
 	if ent1_chunk and ent2_chunk and ent1_chunk != ent2_chunk then
 		local offset = INFMAP.unlocalize(vector_origin, ent1_chunk - ent2_chunk)
-		INFMAP.translate_constraints(ent1_constraints, offset, ent2_chunk)
+		INFMAP.translate_system(ent1_system, offset, ent2_chunk)
 	end
 
 	return true
@@ -113,14 +111,14 @@ end
 
 -- recursive search through contraption
 -- table of ents, with "parent" being the main entity to check
-function INFMAP.validate_constraints(ent, prev)
+function INFMAP.validate_system(ent, prev)
 	if INFMAP.filter_constraint_parsing(ent) then return end
 	if ent.INFMAP_CONSTRAINED then return end -- already scanned
 
 	ent.INFMAP_CONSTRAINED = {[1] = ent, ["parent"] = ent}
 
 	if IsValid(prev) then
-		if !INFMAP.merge_constraints(ent, prev) then return end
+		if !INFMAP.merge_system(ent, prev) then return end
 	end
 
 	-- recurse
@@ -131,7 +129,7 @@ function INFMAP.validate_constraints(ent, prev)
 			e = e.Entity
 
 			if e == ent then continue end
-			INFMAP.validate_constraints(e, ent)
+			INFMAP.validate_system(e, ent)
 		end
 	end
 end
@@ -169,7 +167,7 @@ function INFMAP.update_cross_chunk_collision(ent)
 				for x = chunk_min[1], chunk_max[1] do
 					local chunk_offset = INFMAP.Vector(x, y, z)
 					if chunk_offset == chunk then continue end -- never self-clone
-				
+
 					-- dont clone 2 times
 					local i = INFMAP.encode_vector(chunk_offset)
 					local stored = ent.INFMAP_CLONES[i]
@@ -181,7 +179,7 @@ function INFMAP.update_cross_chunk_collision(ent)
 					clone:Spawn()
 					ent.INFMAP_CLONES[i] = clone
 				end
-			end 
+			end
 		end
 	end
 end

@@ -25,9 +25,9 @@ local INFMAP_SAMPLER_FUNCS = {
 					vertex(0,   res, 0, 0)
 				mesh.End()
 				--render.DrawScreenQuadEx(
-				--	(  - pos[1]) * w - 1, 
-				--	(1 - pos[2]) * h - 1, 
-				--	size * w + 1, 
+				--	(  - pos[1]) * w - 1,
+				--	(1 - pos[2]) * h - 1,
+				--	size * w + 1,
 				--	size * h + 1
 				--)
 				render.CapturePixels()
@@ -54,11 +54,11 @@ function INFMAP.Sampler(path, res)
 
 	local material = Material(path .. ".png")
 	local render_target = GetRenderTargetEx(
-		"infmap_sampler_" .. res, 
-		res + 2, 
-		res + 2, 
+		"infmap_sampler_" .. res,
+		res + 2,
+		res + 2,
 		RT_SIZE_NO_CHANGE,
-		MATERIAL_RT_DEPTH_NONE, 
+		MATERIAL_RT_DEPTH_NONE,
 		1 + 4 + 8 + 256, -- pixel filtering, clampU, clampV, nomips
 		0,               -- no createrendertargetflags
 		IMAGE_FORMAT_RGB888

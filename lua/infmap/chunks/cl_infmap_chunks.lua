@@ -11,7 +11,7 @@ function INFMAP.draw_render_bounds(eye_pos)
 
 	for ent, _ in pairs(force_renderbounds) do
 		local render_bounds = ent.INFMAP_RENDER_BOUNDS
-		if !render_bounds then 
+		if !render_bounds then
 			force_renderbounds[ent] = nil
 			continue
 		end
@@ -173,7 +173,7 @@ local function network_var_changed(ent, name, old, new, recurse)
 
 		return
 	end
-	
+
 	ent:SetChunk(INFMAP.decode_vector(new))
 end
 hook.Add("EntityNetworkedVarChanged", "infmap_nw2", network_var_changed)
@@ -198,10 +198,10 @@ hook.Add("PostDrawTranslucentRenderables", "infmap_debug", function()
 	local chunk = lp:GetChunk() or INFMAP.Vector()
 	local cs = Vector(1, 1, 1) * INFMAP.chunk_size
 	local co = INFMAP.unlocalize(vector_origin, chunk)--chunk_offset * INFMAP.chunk_size * 2
-	
+
 	render.DrawWireframeSphere(Vector(), 10, 10, 10, Color(255, 0, 0, 255), true)
 	render.DrawWireframeBox(INFMAP.chunk_origin, Angle(), -cs, cs, Color(255, 255, 255, 0), true)
-	
+
 	--render.DrawWireframeBox(Vector(), Angle(), -cs - co, cs - co, black, true)
 	render.DrawWireframeBox(Vector(), Angle(), -maxsize - co, maxsize - co, Color(0, 0, 255, 255), true)
 
@@ -220,19 +220,19 @@ hook.Add("PostDrawTranslucentRenderables", "infmap_debug", function()
 	for _, vbsp in ipairs(ents.FindByClass("infmap_vbsp_client")) do
 		local size = vbsp:GetVBSPSize()
 		render.DrawWireframeBox(
-			vbsp:GetPos(), 
+			vbsp:GetPos(),
 			vbsp:GetAngles(),
-			-size, 
-			size, 
+			-size,
+			size,
 			Color(0, 255, 0),
 			true
 		)
 
 		render.DrawWireframeBox(
-			vbsp:GetVBSPPos(), 
-			Angle(), 
-			-size, 
-			size, 
+			vbsp:GetVBSPPos(),
+			Angle(),
+			-size,
+			size,
 			Color(255, 0, 0),
 			true
 		)

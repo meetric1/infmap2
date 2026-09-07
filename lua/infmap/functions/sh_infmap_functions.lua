@@ -49,7 +49,7 @@ function INFMAP.decode_vector(str)
 			num = num + string.byte(str, index, index) - 1
 			index = index - 1
 		end
-		
+
 		if negative then
 			vec[i] = -num
 		else
@@ -88,8 +88,8 @@ function INFMAP.in_chunk(pos, size)
 	local z = pos[3] - chunk_origin[3]
 
 	return (
-		x >= -chunk_size and x <= chunk_size and 
-		y >= -chunk_size and y <= chunk_size and 
+		x >= -chunk_size and x <= chunk_size and
+		y >= -chunk_size and y <= chunk_size and
 		z >= -chunk_size and z <= chunk_size
 	)
 end
@@ -103,11 +103,11 @@ function INFMAP.localize(pos, size)
 	local chunk_size = size or INFMAP.chunk_size
 	local chunk_size2 = chunk_size * 2
 	local chunk_size2_inv = 1 / chunk_size2
-	
+
 	-- calculate chunk offset
 	local chunk_offset = INFMAP.Vector(
-		math.floor((x + chunk_size) * chunk_size2_inv), 
-		math.floor((y + chunk_size) * chunk_size2_inv), 
+		math.floor((x + chunk_size) * chunk_size2_inv),
+		math.floor((y + chunk_size) * chunk_size2_inv),
 		math.floor((z + chunk_size) * chunk_size2_inv)
 	)
 
@@ -136,8 +136,8 @@ end
 -- replace with util.IsBoxIntersectingBox if desired
 function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
 	return (
-		max_b[1] >= min_a[1] and min_b[1] <= max_a[1] and 
-		max_b[2] >= min_a[2] and min_b[2] <= max_a[2] and 
+		max_b[1] >= min_a[1] and min_b[1] <= max_a[1] and
+		max_b[2] >= min_a[2] and min_b[2] <= max_a[2] and
 		max_b[3] >= min_a[3] and min_b[3] <= max_a[3]
 	)
 end
@@ -178,8 +178,6 @@ INFMAP.filter_classes = {
 	["env_rockettrail"] = true,
 	["env_fog_controller"] = true,
 	["sizehandler"] = true,
-	["player_pickup"] = true,
-	["phys_spring"] = true,
 	["sky_camera"] = true,
 	["logic_collision_pair"] = true,
 	["lvs_wheeldrive_steerhandler"] = true,
@@ -233,7 +231,7 @@ end
 -- renderer filter - which entities shouldnt be rendered?
 function INFMAP.filter_render(ent, ignore)
 	if !ignore and !ent:IsChunkValid() then return true end
-	
+
 	if ent:GetNoDraw() then return true end
 
 	return INFMAP.filter_general(ent)
@@ -269,117 +267,55 @@ function INFMAP.hook_run_safe(hook_name, ...)
 end
 -- INFMAP.hook_run_safe = hook.Run
 
--- algorithm to split concave (and convex) shapes given a set of triangles
--- tris are in the format {pos1, pos2, pos3...}
+-- algorithm to split concave shapes given a set of triangles
+-- tris are in the format {pos1, pos2, pos3, ...}
 -- code based on Glass: Rewrite
 function INFMAP.split_concave(tris, plane_pos, plane_dir)
-	if !tris then return {} end
+	plane_dir = plane_dir:GetNormalized()
 
-	local plane_dir = plane_dir:GetNormalized()
 	local split_tris = {}
-	local plane_points = {}
+	local intersect = util.IntersectRayWithPlane
 
-	-- loop through all triangles in the mesh
-	local util_IntersectRayWithPlane = util.IntersectRayWithPlane
-	local table_insert = table.insert
-	for i = 1, #tris, 3 do
-		local pos1 = tris[i    ]
-		local pos2 = tris[i + 1]
-		local pos3 = tris[i + 2]
+	local function inside(p)
+		return (p - plane_pos):Dot(plane_dir) >= 0
+	end
 
-		-- get points that are valid sides of the plane
-		local pos1_valid = (pos1 - plane_pos):Dot(plane_dir) >= 0
-		local pos2_valid = (pos2 - plane_pos):Dot(plane_dir) >= 0
-		local pos3_valid = (pos3 - plane_pos):Dot(plane_dir) >= 0
-		
-		-- all possible states of the intersected triangle
-		if pos1_valid then
-			if pos2_valid then 
-				if pos3_valid then -- pos1 = valid, pos2 = valid, pos3 = valid
-					table_insert(split_tris, pos1)
-					table_insert(split_tris, pos2)
-					table_insert(split_tris, pos3)
-				else -- pos1 = valid, pos2 = valid, pos3 = invalid
-					local point1 = util_IntersectRayWithPlane(pos1, pos3 - pos1, plane_pos, plane_dir) or pos3
-					local point2 = util_IntersectRayWithPlane(pos2, pos3 - pos2, plane_pos, plane_dir) or pos3
-					table_insert(split_tris, pos1)
-					table_insert(split_tris, pos2)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, point2)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, pos2)
-					--table_insert(plane_points, point1)
-					--table_insert(plane_points, point2)
-				end
-			else 
-				if pos3_valid then -- pos1 = valid, pos2 = invalid, pos3 = valid
-					local point1 = util_IntersectRayWithPlane(pos1, pos2 - pos1, plane_pos, plane_dir) or pos2
-					local point2 = util_IntersectRayWithPlane(pos3, pos2 - pos3, plane_pos, plane_dir) or pos2
-					table_insert(split_tris, point1)
-					table_insert(split_tris, pos3)
-					table_insert(split_tris, pos1)
-					table_insert(split_tris, pos3)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, point2)
-					--table_insert(plane_points, point2)
-					--table_insert(plane_points, point1)
-				else -- pos1 = valid, pos2 = invalid, pos3 = invalid
-					local point1 = util_IntersectRayWithPlane(pos1, pos2 - pos1, plane_pos, plane_dir) or pos2
-					local point2 = util_IntersectRayWithPlane(pos1, pos3 - pos1, plane_pos, plane_dir) or pos3
-					table_insert(split_tris, pos1)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, point2)
-					--table_insert(plane_points, point2)
-					--table_insert(plane_points, point1)
-				end
-			end
-		else
-			if pos2_valid then
-				if pos3_valid then -- pos1 = invalid, pos2 = valid, pos3 = valid
-					local point1 = util_IntersectRayWithPlane(pos2, pos1 - pos2, plane_pos, plane_dir) or pos1
-					local point2 = util_IntersectRayWithPlane(pos3, pos1 - pos3, plane_pos, plane_dir) or pos1
-					table_insert(split_tris, pos2)
-					table_insert(split_tris, pos3)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, point2)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, pos3)
-					--table_insert(plane_points, point1)
-					--table_insert(plane_points, point2)
-				else -- pos1 = invalid, pos2 = valid, pos3 = invalid
-					local point1 = util_IntersectRayWithPlane(pos2, pos1 - pos2, plane_pos, plane_dir) or pos1
-					local point2 = util_IntersectRayWithPlane(pos2, pos3 - pos2, plane_pos, plane_dir) or pos3
-					table_insert(split_tris, point2)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, pos2)
-					--table_insert(plane_points, point1)
-					--table_insert(plane_points, point2)
-				end
-			else
-				if pos3_valid then -- pos1 = invalid, pos2 = invalid, pos3 = valid
-					local point1 = util_IntersectRayWithPlane(pos3, pos1 - pos3, plane_pos, plane_dir) or pos1
-					local point2 = util_IntersectRayWithPlane(pos3, pos2 - pos3, plane_pos, plane_dir) or pos2
-					table_insert(split_tris, pos3)
-					table_insert(split_tris, point1)
-					table_insert(split_tris, point2)
-					--table_insert(plane_points, point2)
-					--table_insert(plane_points, point1)
-				else -- pos1 = invalid, pos2 = invalid, pos3 = invalid
+	-- sutherland-hodgman
+	local function clip(poly)
+		local result = {}
 
-				end
+		for i = 1, #poly do
+			local a = poly[i] -- current
+			local b = poly[i % #poly + 1] -- previous
+			local a_in = inside(a)
+			local b_in = inside(b)
+
+			if a_in and b_in then
+				result[#result + 1] = b
+			elseif a_in then
+				result[#result + 1] = intersect(a, b - a, plane_pos, plane_dir) or b
+			elseif b_in then
+				result[#result + 1] = intersect(a, b - a, plane_pos, plane_dir) or b
+				result[#result + 1] = b
 			end
 		end
+
+		return result
 	end
-	
-	-- uncomment for convex shapes
-	-- add triangles inside of the object
-	-- each 2 points is an edge, create a triangle between the egde and first point
-	-- start at index 4 since it will make an n-gon with 1-2-3 (then 1-3-4, and so on)
-	--for i = 4, #plane_points, 2 do
-	--	table_insert(split_tris, plane_points[1    ])
-	--	table_insert(split_tris, plane_points[i - 1])
-	--	table_insert(split_tris, plane_points[i    ])
-	--end
+
+	for i = 1, #tris, 3 do
+		local poly = clip({
+			tris[i    ],
+			tris[i + 1],
+			tris[i + 2]
+		})
+
+		for j = 2, #poly - 1 do
+			split_tris[#split_tris + 1] = poly[1    ]
+			split_tris[#split_tris + 1] = poly[j    ]
+			split_tris[#split_tris + 1] = poly[j + 1]
+		end
+	end
 
 	return split_tris
 end

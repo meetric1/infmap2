@@ -8,9 +8,9 @@ local QUADTREE_FUNCS = {
 		--local wiggle = math.min(self.size + (self.pos[3] - pos[3] + 1000), self.size)
 		local diff_x = pos[1] - self.pos[1]
 		local diff_y = pos[2] - self.pos[2]
-		
+
 		local min = -wiggle
-		if diff_x < min or diff_y < min then return false end 
+		if diff_x < min or diff_y < min then return false end
 
 		local max = self.size + wiggle
 		if diff_x > max or diff_y > max then return false end
@@ -64,8 +64,8 @@ local QUADTREE = {
 function INFMAP.Quadtree(pos, size, path)
 	path = path or ""
 	return setmetatable({
-		["pos"] = {pos[1], pos[2], pos[3]}, 
-		["size"] = size, 
+		["pos"] = {pos[1], pos[2], pos[3]},
+		["size"] = size,
 		["path"] = path,
 		["bottom"] = #path == 9
 	}, QUADTREE)

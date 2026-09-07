@@ -59,7 +59,7 @@ end
 
 function ENT:StartTouch(ent)
 	if !ent:IsPlayer() then return end
-	
+
 	ent:SetNW2Entity("INFMAP_VBSP_CLIENT", self.INFMAP_VBSP_CLIENT)
 end
 
@@ -67,10 +67,10 @@ end
 function ENT:EndTouch(ent)
 	if ent:IsMarkedForDeletion() or ent:IsChunkValid() then return end
 
-	INFMAP.validate_constraints(ent)
+	INFMAP.validate_system(ent)
 	if INFMAP.filter_teleport(ent, true) then return end
 
-	if ent:IsPlayer() then 
+	if ent:IsPlayer() then
 		ent:DropObject()
 		ent:SetNW2Entity("INFMAP_VBSP_CLIENT", NULL)
 	end
@@ -81,8 +81,8 @@ function ENT:EndTouch(ent)
 	--local translation_offset = Matrix()
 	--translation_offset:SetTranslation(INFMAP.unlocalize(vector_origin, -chunk_offset))
 	--translation_offset:Mul(translation)
-	--INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, translation_offset, self.INFMAP_VBSP_CHUNK + chunk_offset)
-	INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, translation, self.INFMAP_VBSP_CHUNK)
+	--INFMAP.translate_system(ent.INFMAP_CONSTRAINED, translation_offset, self.INFMAP_VBSP_CHUNK + chunk_offset)
+	INFMAP.translate_system(ent.INFMAP_CONSTRAINED, translation, self.INFMAP_VBSP_CHUNK)
 end
 
 -- INFMAP -> VBSP
@@ -98,11 +98,11 @@ function ENT:Think()
 		local pos = vbsp_client:INFMAP_WorldToLocal(ent:INFMAP_GetPos())
 		if !INFMAP.aabb_intersect_aabb(pos, pos, mins, maxs) then continue end
 
-		INFMAP.validate_constraints(ent)
+		INFMAP.validate_system(ent)
 		if INFMAP.filter_teleport(ent) then continue end
 
 		if ent:IsPlayer() then ent:DropObject() end
-		INFMAP.translate_constraints(ent.INFMAP_CONSTRAINED, INFMAP.VBSP.to_local(vbsp_client), nil)
+		INFMAP.translate_system(ent.INFMAP_CONSTRAINED, INFMAP.VBSP.to_local(vbsp_client), nil)
 	end
 
 	self:SetVBSPAngles(Angle(0, CurTime(), 0))
@@ -147,7 +147,7 @@ hook.Add("SetupPlayerVisibility", "infmap_vbsp", function(ply, view_entity)
 			eye_pos_local[3] = math.Clamp(eye_pos_local[3], mins[3], maxs[3])
 			eye_pos_local:Add(vbsp:VBSPOffset())
 			AddOriginToPVS(eye_pos_local)
-			
+
 			-- debug (project back to worldspace for viewing pleasure)
 			--eye_pos_local:Sub(vbsp:VBSPOffset())
 			--eye_pos_local:Set(vbsp.INFMAP_VBSP_CLIENT:INFMAP_LocalToWorld(eye_pos_local))

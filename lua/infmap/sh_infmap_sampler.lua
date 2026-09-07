@@ -46,8 +46,8 @@ local INFMAP_SAMPLER = {
 }
 
 function INFMAP.Sampler(path)
-	if !file.Exists(path, "GAME") then 
-		error("Invalid path!") 
+	if !file.Exists(path, "GAME") then
+		error("Invalid path!")
 	end
 
 	local sampler = setmetatable({}, INFMAP_SAMPLER)
@@ -55,8 +55,8 @@ function INFMAP.Sampler(path)
 		if status != FSASYNC_OK then return end
 
 		local res = math.sqrt(#data / 2) -- stride of 2
-		if math.floor(res) != res then 
-			error("Invalid data!") 
+		if math.floor(res) != res then
+			error("Invalid data!")
 		end
 
 		sampler.metadata = data

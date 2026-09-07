@@ -1,5 +1,3 @@
-AddCSLuaFile()
-
 -- infmap vector class, since the gmod vector class is slow as fuck and imprecise
 local INFMAP_VECTOR_FUNCS = {
 	["IsZero"] = function(a)
@@ -60,7 +58,7 @@ if game.SinglePlayer() then
 	-- method detours
 	for k, v in pairs(INFMAP_VECTOR) do
 		if !isfunction(v) then continue end
-		
+
 		INFMAP_VECTOR[k] = function(a, b)
 			if getmetatable(a) != INFMAP_VECTOR or (b and getmetatable(b) != INFMAP_VECTOR) then
 				ErrorNoHaltWithStack(string.format("INVALID OPERATION: %s(%s, %s)", k, type(a), type(b)))
