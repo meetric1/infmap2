@@ -4,12 +4,12 @@
 -- which entities should be checked to be wrapped, per frame
 INFMAP.wrapped_ents = {}
 local function check_ent(ent)
-	if !INFMAP.filter_teleport(ent) then
-		INFMAP.wrapped_ents[ent] = true
-		return true
-	else
+	if INFMAP.filter_teleport(ent) then
 		INFMAP.wrapped_ents[ent] = nil
 		return false
+	else
+		INFMAP.wrapped_ents[ent] = true
+		return true
 	end
 end
 
@@ -59,14 +59,17 @@ hook.Add("Think", "infmap_wrap", function()
 			continue
 		end
 
-		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() then continue end
+		if INFMAP.in_chunk(ent:INFMAP_GetPos()) or ent:IsPlayerHolding() then
+			continue
+		end
+
 		INFMAP.validate_system(ent)
 		if !check_ent(ent) then continue end
 
 		-- time to teleport
-		local _, chunk = INFMAP.localize(ent:INFMAP_GetPos())
-		local offset = INFMAP.unlocalize(vector_origin, -chunk)
-		chunk = chunk + ent:GetChunk()
+		local _, chunk_offset = INFMAP.localize(ent:INFMAP_GetPos())
+		local offset = INFMAP.unlocalize(vector_origin, -chunk_offset)
+		local chunk = chunk_offset + ent:GetChunk()
 
 		-- hook support (slow..)
 		--local err, prevent = INFMAP.hook_run_safe("OnChunkWrap", ent, chunk)
@@ -133,7 +136,7 @@ end)]]
 -------------
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
-	local prev_chunk = self.INFMAP_CHUNK
+	local prev_chunk = self:GetChunkInternal()
 	if chunk == prev_chunk then return end
 
 	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
@@ -143,8 +146,8 @@ function ENTITY:SetChunk(chunk)
 		chunk = INFMAP.Vector(chunk) -- copy
 	end
 
+	self:SetChunkNetworked(chunk)
 	self:SetChunkInternal(chunk)
-	self.INFMAP_CHUNK = chunk -- !!!CACHED FOR HIGH PERFORMANCE USE ONLY!!!
 	self:SetCustomCollisionCheck(chunk != nil)
 	INFMAP.update_cross_chunk_collision(self)
 	check_ent(self)

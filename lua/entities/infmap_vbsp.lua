@@ -77,11 +77,6 @@ function ENT:EndTouch(ent)
 
 	-- project to infmap, localize to relevant chunk (incase vbsp intersects a chunk border)
 	local translation = INFMAP.VBSP.to_world(self.INFMAP_VBSP_CLIENT)
-	--local _, chunk_offset = INFMAP.localize(translation * ent:INFMAP_GetPos())
-	--local translation_offset = Matrix()
-	--translation_offset:SetTranslation(INFMAP.unlocalize(vector_origin, -chunk_offset))
-	--translation_offset:Mul(translation)
-	--INFMAP.translate_system(ent.INFMAP_CONSTRAINED, translation_offset, self.INFMAP_VBSP_CHUNK + chunk_offset)
 	INFMAP.translate_system(ent.INFMAP_CONSTRAINED, translation, self.INFMAP_VBSP_CHUNK)
 end
 

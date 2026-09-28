@@ -106,13 +106,13 @@ end
 -- TODO: physgun glow shows up in other chunks
 local ENTITY = FindMetaTable("Entity")
 function ENTITY:SetChunk(chunk)
-	local prev_chunk = self.INFMAP_CHUNK
+	local prev_chunk = self:GetChunkInternal()
 	if !chunk and !prev_chunk then return end
 
 	local err, prevent = INFMAP.hook_run_safe("OnChunkUpdate", self, chunk, prev_chunk)
 	if !err and prevent then return end
 
-	self.INFMAP_CHUNK = chunk
+	self:SetChunkInternal(chunk)
 
 	-- offset rendering (or dont. idc)
 	local local_player = LocalPlayer()
@@ -144,14 +144,14 @@ function ENTITY:SetChunk(chunk)
 		end
 	end
 
-	-- if our local client updated we need to update everything else
+	-- if our local clients chunk was updated we need to update everything else
 	if self != local_player then return end
 
 	local_player:SetCustomCollisionCheck(chunk and true or false)
 	for _, ent in ents.Iterator() do
 		if ent == local_player or INFMAP.filter_render(ent) then continue end
 
-		ent:SetChunk(ent.INFMAP_CHUNK) -- force update
+		ent:SetChunk(ent:GetChunkInternal()) -- force update
 	end
 end
 

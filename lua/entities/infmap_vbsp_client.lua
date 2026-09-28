@@ -79,7 +79,7 @@ hook.Add("RenderScene", "infmap_vbsp_client", function(eye_pos, eye_angles, fov)
 	if !IsValid(vbsp_client) then return end
 	--print(vbsp_client)
 
-	if local_player:GetChunkInternal() == nil and local_player:GetChunk() != vbsp_client:GetChunk() then
+	if local_player:GetChunkNetworked() == nil and local_player:GetChunkInternal() != vbsp_client:GetChunkInternal() then
 		local_player:SetChunk(vbsp_client:GetChunk())
 	end
 

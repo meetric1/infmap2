@@ -90,7 +90,7 @@ end, true)
 detour(ENTITY, "__newindex", function(self, key, value)
 	if key == "RenderOverride" then
 		self.INFMAP_RenderOverride = value
-		self:SetChunk(self.INFMAP_CHUNK) -- force update
+		self:SetChunk(self:GetChunkInternal()) -- force update
 		return
 	end
 

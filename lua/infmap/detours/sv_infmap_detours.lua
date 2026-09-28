@@ -196,7 +196,7 @@ end)
 hook.Add("EntityFireBullets", "infmap_bullet_detour", function(ent, bullet)
 	if !ent:IsChunkValid() then return end
 
-	local pos, chunk = INFMAP.localize(bullet.Src)
+	local pos = INFMAP.localize(bullet.Src)
 	bullet.Src = pos
 	return true
 end)
