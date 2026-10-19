@@ -1,0 +1,5 @@
+@PointClass base(Targetname, Parentname, Angles) studio("models/editor/cone_helper.mdl") line(100 100 255, targetname, link) = infmap : "Infmap Space"
+[
+	origin(vector)				: "origin" : "0 0 0" : "Infmap box origin"
+	size(integer)				: "size" : 10000 : "Infmap box size"
+]
