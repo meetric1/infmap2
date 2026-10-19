@@ -61,8 +61,8 @@ detour(ENTITY, "EyePos", function(self)
 end)
 
 detour(ENTITY, "NearestPoint", function(self, pos)
-	local pos, chunk = INFMAP.localize(pos)
-	return INFMAP.unlocalize(self:INFMAP_NearestPoint(pos), chunk)
+	local self_chunk = self:GetChunk()
+	return INFMAP.unlocalize(self:INFMAP_NearestPoint(INFMAP.unlocalize(pos, -self_chunk)), self_chunk)
 end)
 
 ---------------------

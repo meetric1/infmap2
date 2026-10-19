@@ -258,12 +258,17 @@ function INFMAP.filter_render(ent, ignore)
 end
 
 -- fancy render filter - some entities require a full "fancy" rendering detour using the cam library
-function INFMAP.filter_render_fancy(ent)
-	if ent:IsPlayer() then return true end
-	if ent:IsWeapon() then return true end
-	if ent:IsRagdoll() then return true end
+--function INFMAP.filter_render_fancy(ent)
+--	if ent:IsPlayer() then return true end
+--	if ent:IsWeapon() then return true end
+--	if ent:IsRagdoll() then return true end
+--
+--	return false
+--end
 
-	return false
+-- lighting breaks.. FIXME!
+function INFMAP.filter_render_fancy(ent)
+	return true
 end
 
 -- constraint filter- what constraints aren't actually constraints?
