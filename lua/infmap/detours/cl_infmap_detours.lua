@@ -19,7 +19,7 @@ end
 local ENTITY = FindMetaTable("Entity")
 
 detour(ENTITY, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(INFMAP.clamp_pos(pos)) -- shut console up
+	self:INFMAP_SetPos(INFMAP.clamp_to_bounds(pos)) -- shut console up
 end)
 
 detour(ENTITY, "GetPos", function(self)
@@ -40,7 +40,7 @@ end)
 
 detour(ENTITY, "GetWorldTransformMatrix", function(self)
 	local world_transform_matrix = self:INFMAP_GetWorldTransformMatrix()
-	world_transform_matrix:Translate(INFMAP.unlocalize(vector_origin, self:GetChunk() - LocalPlayer():GetChunk()))
+	world_transform_matrix:SetTranslation(INFMAP.unlocalize(world_transform_matrix:GetTranslation(), self:GetChunk() - LocalPlayer():GetChunk()))
 	return world_transform_matrix
 end)
 
@@ -107,7 +107,7 @@ detour(PHYSOBJ, "GetPos", function(self)
 end)
 
 detour(PHYSOBJ, "SetPos", function(self, pos)
-	self:INFMAP_SetPos(INFMAP.clamp_pos(pos)) -- shut console up
+	self:INFMAP_SetPos(INFMAP.clamp_to_bounds(pos)) -- shut console up
 end)
 
 ---------------------

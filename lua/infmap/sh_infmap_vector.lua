@@ -2,6 +2,11 @@
 local INFMAP_VECTOR_FUNCS = {
 	["IsZero"] = function(a)
 		return a[1] == 0 and a[2] == 0 and a[3] == 0
+	end,
+	["Add"] = function(a, b)
+		a[1] = a[1] + b[1]
+		a[2] = a[2] + b[2]
+		a[3] = a[3] + b[3]
 	end
 }
 
@@ -77,3 +82,58 @@ if game.SinglePlayer() then
 		return INFMAP_Vector(x, ...)
 	end
 end
+
+-- Vector() detouring
+--[[
+local VECTOR = FindMetaTable("Vector")
+if !VECTOR or CLIENT then return end
+
+local vector_cache = setmetatable({}, {["__mode"] = "k"})
+local function set_cached(v, x, y, z)
+	local cached = vector_cache[v]
+	if !cached then
+		vector_cache[v] = {x, y ,z}
+	else
+		cached[1] = x
+		cached[2] = y
+		cached[3] = z
+	end
+
+	v:SetUnpacked(x, y, z)
+end
+
+local function get_cached(v)
+	if !isvector(v) then return {v, v, v} end
+
+	local cached = vector_cache[v]
+	if !cached then
+		cached = v:ToTable()
+		vector_cache[v] = cached
+	end
+
+	return cached
+end
+
+VECTOR.__add = function(a, b)
+	a = get_cached(a)
+	b = get_cached(b)
+
+	local new = Vector()
+	set_cached(new, a[1] + b[1], a[2] + b[2], a[3] + b[3])
+	return new
+end
+
+VECTOR.__mul = function(a, b)
+	a = get_cached(a)
+	b = get_cached(b)
+
+	local new = Vector()
+	set_cached(new, a[1] * b[1], a[2] * b[2], a[3] * b[3])
+	return new
+end
+
+VECTOR.__tostring = function(a)
+	a = get_cached(a)
+	return string.format("%f %f %f", a[1], a[2], a[3])
+end
+]]

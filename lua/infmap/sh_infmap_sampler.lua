@@ -1,13 +1,13 @@
 -- R16 sampler
 local function get_data(metadata, res, x, y)
-	x = math.Clamp(x, 0, res - 1) -- clampU
-	y = math.Clamp(y, 0, res - 1) -- clampV
+	x = math.floor(math.Clamp(x, 0, res - 1)) -- clampU
+	y = math.floor(math.Clamp(y, 0, res - 1)) -- clampV
 
 	local i = (y * res + x) * 2 + 1 -- stride of 2 + lua is 1 indexed
 	return (
-		string.byte(metadata[i + 1]) * 2^8 + -- up << 8 + low
-		string.byte(metadata[i    ])
-	)
+		string.byte(metadata[i    ]) +
+		string.byte(metadata[i + 1]) * 2^8
+	) / (2^16 - 1) -- map(low + (up << 8), 0, 2^16-1, 0, 1)
 end
 
 local INFMAP_SAMPLER_FUNCS = {

@@ -43,7 +43,7 @@ end)
 
 detour(ENTITY, "GetWorldTransformMatrix", function(self)
 	local world_transform_matrix = self:INFMAP_GetWorldTransformMatrix()
-	world_transform_matrix:Translate(INFMAP.unlocalize(vector_origin, self:GetChunk()))
+	world_transform_matrix:SetTranslation(INFMAP.unlocalize(world_transform_matrix:GetTranslation(), self:GetChunk()))
 	return world_transform_matrix
 end)
 
@@ -220,7 +220,7 @@ local function detour_filter(filter, start_chunk)
 		end
 	else -- probably an entity, or nil
 		new_filter = function(e)
-			return e != filter and e:GetChunk() == start_chunk
+			return e ~= filter and e:GetChunk() == start_chunk
 		end
 	end
 
@@ -231,7 +231,6 @@ end
 local function detour_trace(trace_func, data, extra)
 	local old_start = data.start
 
-	-- early check, incase we're in source bounds...
 	if INFMAP.in_bounds(old_start) then
 		return trace_func(data, extra)
 	end
@@ -240,23 +239,53 @@ local function detour_trace(trace_func, data, extra)
 	local old_endpos = data.endpos
 	local old_filter = data.filter
 
-	-- localize start and end position of trace
-	local start, start_chunk = INFMAP.localize(old_start)
-	data.start = start
-	data.endpos = INFMAP.unlocalize(old_endpos, -start_chunk)
-	data.filter = detour_filter(old_filter, start_chunk)
+	local chunk_size = Vector(INFMAP.chunk_size + 1, INFMAP.chunk_size + 1, INFMAP.chunk_size + 1)
+	local bounds_mins = INFMAP.chunk_origin - chunk_size
+	local bounds_maxs = INFMAP.chunk_origin + chunk_size
 
-	-- TRACE
-	local hit_data = trace_func(data, extra)
+	local ray_dir = old_endpos - old_start
+	local ray_length = ray_dir:Length()
+	local ray_distance = 0
+	ray_dir:Normalize() -- avoid division by 0
+
+	-- cross chunk traces
+	local ray_traceresult = nil
+	local ray_endpos = old_start -- local space
+	local ray_chunk = INFMAP.Vector()
+	for _ = 1, 5 do
+		-- where to shoot local ray
+		local ray_startpos, ray_chunk_offset = INFMAP.localize(ray_endpos)
+		ray_chunk:Add(ray_chunk_offset)
+
+		-- how far to shoot local ray
+		local bounds_length = ray_length - ray_distance
+		if ray_length > 0 then
+			local _, ray_bounds = INFMAP.ray_intersect_aabb(ray_startpos, ray_dir, bounds_mins, bounds_maxs)
+			bounds_length = math.min(bounds_length, ray_bounds)
+		end
+
+		ray_endpos = (ray_dir * bounds_length) ray_endpos:Add(ray_startpos)
+
+		data.start = ray_startpos
+		data.endpos = ray_endpos
+		data.filter = detour_filter(old_filter, ray_chunk)
+
+		ray_traceresult = trace_func(data, extra)
+		ray_distance = ray_distance + bounds_length * ray_traceresult.Fraction
+		if ray_traceresult.Hit or ray_distance >= ray_length then
+			break
+		end
+	end
 
 	-- unlocalize result data
-	hit_data.HitPos = INFMAP.unlocalize(hit_data.HitPos, start_chunk)
-	hit_data.StartPos = INFMAP.unlocalize(hit_data.StartPos, start_chunk)
+	ray_traceresult.Fraction = ray_distance / ray_length
+	ray_traceresult.HitPos = INFMAP.unlocalize(ray_traceresult.HitPos, ray_chunk)
+	ray_traceresult.StartPos = Vector(old_start)
 
-	-- custom infmap logic
-	local hit_entity = hit_data.Entity
+	-- custom infmap clone logic
+	local hit_entity = ray_traceresult.Entity
 	if IsValid(hit_entity) and hit_entity:GetClass() == "infmap_clone" then
-		hit_data.Entity = hit_entity:GetReferenceParent()
+		ray_traceresult.Entity = hit_entity:GetReferenceParent()
 	end
 
 	-- restore data (since we modified table)
@@ -264,11 +293,15 @@ local function detour_trace(trace_func, data, extra)
 	data.endpos = old_endpos
 	data.filter = old_filter
 
-	return hit_data
+	return ray_traceresult
 end
 
 detour(util, "TraceLine", function(data)
 	return detour_trace(util.INFMAP_TraceLine, data)
+end, true)
+
+detour(util, "TraceHull", function(data)
+	return detour_trace(util.INFMAP_TraceHull, data)
 end, true)
 
 -------------------

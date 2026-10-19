@@ -39,10 +39,10 @@ local function translate_ent(ent, translation, old_vel, old_angvel)
 		end
 
 		-- translate position
-		-- !!!WARNING!!! clamp_pos can cause undefined behavior with constraints
+		-- !!!WARNING!!! clamping can cause undefined behavior with constraints
 		local pos = ent:INFMAP_GetPos()
 		pos:Mul(translation)
-		ent:INFMAP_SetPos(INFMAP.clamp_pos(pos))
+		ent:INFMAP_SetPos(INFMAP.clamp_to_bounds(pos))
 
 		-- reset velocities back
 		local phys = ent:GetPhysicsObject()

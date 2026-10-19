@@ -1,3 +1,10 @@
+local math_floor = math.floor
+local math_min = math.min
+local math_max = math.max
+local math_Clamp = math.Clamp
+local string_char = string.char
+local string_byte = string.byte
+
 -- useful functions used throughout the lua
 
 -- little endian encoding, in base 255 (since we can't represent 0x00 in a string)
@@ -15,15 +22,15 @@ function INFMAP.encode_vector(vec)
 			num = -num
 		end
 
-		for i = 1, 6 do
-			str = str .. string.char(num % 255 + 1)
-			num = math.floor(num / 255)
+		for _ = 1, 6 do
+			str = str .. string_char(num % 255 + 1)
+			num = math_floor(num / 255)
 		end
 
 		if negative then
-			str = str .. string.char(num % 127 + 1 + 0x80)
+			str = str .. string_char(num % 127 + 1 + 0x80)
 		else
-			str = str .. string.char(num % 127 + 1)
+			str = str .. string_char(num % 127 + 1)
 		end
 	end
 
@@ -37,16 +44,16 @@ function INFMAP.decode_vector(str)
 	local index = #str
 	for i = 3, 1, -1 do
 		local negative = false
-		local num = string.byte(str, index, index) - 1
+		local num = string_byte(str, index, index) - 1
 		if num >= 0x80 then
 			negative = true
 			num = num - 0x80
 		end
 		index = index - 1
 
-		for i = 1, 6 do
+		for _ = 1, 6 do
 			num = num * 255
-			num = num + string.byte(str, index, index) - 1
+			num = num + string_byte(str, index, index) - 1
 			index = index - 1
 		end
 
@@ -60,9 +67,7 @@ function INFMAP.decode_vector(str)
 	return vec
 end
 
--- clamp to source bounds
-function INFMAP.clamp_pos(pos)
-	local math_Clamp = math.Clamp
+function INFMAP.clamp_to_bounds(pos)
 	return Vector(
 		math_Clamp(pos[1], -2^14+1, 2^14-1),
 		math_Clamp(pos[2], -2^14+1, 2^14-1),
@@ -106,9 +111,9 @@ function INFMAP.localize(pos, size)
 
 	-- calculate chunk offset
 	local chunk_offset = INFMAP.Vector(
-		math.floor((x + chunk_size) * chunk_size2_inv),
-		math.floor((y + chunk_size) * chunk_size2_inv),
-		math.floor((z + chunk_size) * chunk_size2_inv)
+		math_floor((x + chunk_size) * chunk_size2_inv),
+		math_floor((y + chunk_size) * chunk_size2_inv),
+		math_floor((z + chunk_size) * chunk_size2_inv)
 	)
 
 	-- calculate localized position
@@ -140,6 +145,21 @@ function INFMAP.aabb_intersect_aabb(min_a, max_a, min_b, max_b)
 		max_b[2] >= min_a[2] and min_b[2] <= max_a[2] and
 		max_b[3] >= min_a[3] and min_b[3] <= max_a[3]
 	)
+end
+
+-- adapted from https://gist.github.com/DomNomNom/46bb1ce47f68d255fd5d
+function INFMAP.ray_intersect_aabb(ray_pos, ray_dir, box_min, box_max)
+    local tmin = (box_min - ray_pos) tmin:Div(ray_dir)
+    local tmax = (box_max - ray_pos) tmax:Div(ray_dir)
+    local t1_x = math_min(tmin[1], tmax[1])
+    local t1_y = math_min(tmin[2], tmax[2])
+    local t1_z = math_min(tmin[3], tmax[2])
+    local t2_x = math_max(tmin[1], tmax[1])
+    local t2_y = math_max(tmin[2], tmax[2])
+    local t2_z = math_max(tmin[3], tmax[3])
+    local tnear = math_max(math_max(t1_x, t1_y), t1_z)
+    local tfar = math_min(math_min(t2_x, t2_y), t2_z)
+    return tnear, tfar
 end
 
 -- we need filters, as there are a *lot* of weird exceptions
@@ -186,7 +206,7 @@ INFMAP.filter_classes = {
 -- base filter - nothing gets through this
 function INFMAP.filter_general(ent)
 	if ent:IsWorld() then return true end
-	if ent.IsConstraint and ent:IsConstraint() then return true end
+	if SERVER and ent:IsConstraint() then return true end
 	if INFMAP.filter_classes[ent:GetClass()] then return true end
 
 	return false
@@ -221,7 +241,7 @@ end
 
 -- collision filter - which entities shouldnt have cross-chunk collision?
 function INFMAP.filter_collision(ent)
-	if ent:IsPlayer() then return true end
+	if ent:IsPlayer() or ent:IsWeapon() then return true end
 	if ent:BoundingRadius() < 10 then return true end -- no tiny props, too much compute
 	if INFMAP.filter_teleport_classes[ent:GetClass()] then return true end
 
