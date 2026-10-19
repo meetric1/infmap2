@@ -246,7 +246,7 @@ local function detour_trace(trace_func, data, extra)
 	local ray_dir = old_endpos - old_start
 	local ray_length = ray_dir:Length()
 	local ray_distance = 0
-	ray_dir:Normalize() -- avoid division by 0
+	ray_dir:Div(ray_length) -- may be NaN
 
 	-- cross chunk traces
 	local ray_traceresult = nil
@@ -257,14 +257,17 @@ local function detour_trace(trace_func, data, extra)
 		local ray_startpos, ray_chunk_offset = INFMAP.localize(ray_endpos)
 		ray_chunk:Add(ray_chunk_offset)
 
-		-- how far to shoot local ray
+		-- how far to shoot local ray (intersect with chunk bounds)
 		local bounds_length = ray_length - ray_distance
 		if ray_length > 0 then
 			local _, ray_bounds = INFMAP.ray_intersect_aabb(ray_startpos, ray_dir, bounds_mins, bounds_maxs)
 			bounds_length = math.min(bounds_length, ray_bounds)
-		end
 
-		ray_endpos = (ray_dir * bounds_length) ray_endpos:Add(ray_startpos)
+			ray_endpos = (ray_dir * bounds_length)
+			ray_endpos:Add(ray_startpos)
+		else
+			ray_endpos = ray_startpos
+		end
 
 		data.start = ray_startpos
 		data.endpos = ray_endpos
@@ -272,6 +275,7 @@ local function detour_trace(trace_func, data, extra)
 
 		ray_traceresult = trace_func(data, extra)
 		ray_distance = ray_distance + bounds_length * ray_traceresult.Fraction
+
 		if ray_traceresult.Hit or ray_distance >= ray_length then
 			break
 		end
