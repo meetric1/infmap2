@@ -13,6 +13,7 @@ ENT.Purpose			= ""
 ENT.Instructions	= ""
 ENT.Spawnable		= false
 ENT.PhysgunDisabled = true
+ENT.DoNotDuplicate  = true
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "ReferenceParent")

@@ -144,7 +144,7 @@ end)
 ---------------------
 local PHYSOBJ = FindMetaTable("PhysObj")
 
-detour(PHYSOBJ, "GetPos", function(self, pos)
+detour(PHYSOBJ, "GetPos", function(self)
 	return INFMAP.unlocalize(self:INFMAP_GetPos(), self:GetEntity():GetChunk())
 end)
 
@@ -228,19 +228,18 @@ local function detour_filter(filter, start_chunk)
 end
 
 -- traces
+local bounds_mins = INFMAP.chunk_origin + Vector(INFMAP.chunk_size + 1, INFMAP.chunk_size + 1, INFMAP.chunk_size + 1)
+local bounds_maxs = INFMAP.chunk_origin - Vector(INFMAP.chunk_size + 1, INFMAP.chunk_size + 1, INFMAP.chunk_size + 1)
 local function detour_trace(trace_func, trace_struct, extra)
 	-- store original data that will be overwritten
 	local trace_struct_start = trace_struct.start
 	local trace_struct_endpos = trace_struct.endpos
 	local trace_struct_filter = trace_struct.filter
 
+	-- sanity check
 	if !isvector(trace_struct_start) or !isvector(trace_struct_endpos) or INFMAP.in_bounds(trace_struct_start) then
 		return trace_func(trace_struct, extra)
 	end
-
-	local chunk_size = Vector(INFMAP.chunk_size + 1, INFMAP.chunk_size + 1, INFMAP.chunk_size + 1)
-	local bounds_mins = INFMAP.chunk_origin - chunk_size
-	local bounds_maxs = INFMAP.chunk_origin + chunk_size
 
 	local ray_dir = trace_struct_endpos - trace_struct_start
 	local ray_length = ray_dir:Length()
