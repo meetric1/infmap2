@@ -83,6 +83,7 @@ function INFMAP.translate_system(system, translation, chunk)
 	for i, ent in ipairs(system) do
 		ent:SetChunk(chunk)
 		translate_ent(ent, translation, velocities[i], ang_velocities[i])
+		INFMAP.update_cross_chunk_collision(ent)
 	end
 end
 
@@ -154,11 +155,12 @@ function INFMAP.update_cross_chunk_collision(ent)
 		ent.INFMAP_CLONES = ent.INFMAP_CLONES or {}
 
 		-- clean unused clones
-		for i, clone in pairs(ent.INFMAP_CLONES) do
-			local chunk = clone:GetChunk()
-			if !INFMAP.aabb_intersect_aabb(chunk, chunk, chunk_min, chunk_max) then
+		for _, clone in pairs(ent.INFMAP_CLONES) do
+			if !IsValid(clone) then continue end
+
+			local clone_chunk = clone:GetChunk()
+			if clone_chunk == chunk or !INFMAP.aabb_intersect_aabb(clone_chunk, clone_chunk, chunk_min, chunk_max) then
 				SafeRemoveEntity(clone)
-				ent.INFMAP_CLONES[i] = nil
 			end
 		end
 

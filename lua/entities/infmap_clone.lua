@@ -40,6 +40,8 @@ function ENT:InitializePhysics(parent)
 		else
 			self:PhysicsDestroy()
 		end
+	elseif SERVER then
+		self:PhysicsInit(self:GetSolid())
 	end
 
 	self.INFMAP_REFERENCE_PARENT_PHYSOBJ = parent_phys

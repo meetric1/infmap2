@@ -149,7 +149,6 @@ function ENTITY:SetChunk(chunk)
 	self:SetChunkNetworked(chunk)
 	self:SetChunkInternal(chunk)
 	self:SetCustomCollisionCheck(chunk != nil)
-	INFMAP.update_cross_chunk_collision(self)
 	check_ent(self)
 
 	-- parent support (recursive)
