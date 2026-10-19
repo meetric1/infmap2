@@ -228,16 +228,16 @@ local function detour_filter(filter, start_chunk)
 end
 
 -- traces
-local function detour_trace(trace_func, data, extra)
-	local old_start = data.start
+local function detour_trace(trace_func, trace_struct, extra)
+	local old_start = trace_struct.start
 
 	if INFMAP.in_bounds(old_start) then
-		return trace_func(data, extra)
+		return trace_func(trace_struct, extra)
 	end
 
 	-- store original data that will be overwritten
-	local old_endpos = data.endpos
-	local old_filter = data.filter
+	local old_endpos = trace_struct.endpos
+	local old_filter = trace_struct.filter
 
 	local chunk_size = Vector(INFMAP.chunk_size + 1, INFMAP.chunk_size + 1, INFMAP.chunk_size + 1)
 	local bounds_mins = INFMAP.chunk_origin - chunk_size
@@ -246,7 +246,7 @@ local function detour_trace(trace_func, data, extra)
 	local ray_dir = old_endpos - old_start
 	local ray_length = ray_dir:Length()
 	local ray_distance = 0
-	ray_dir:Div(ray_length) -- may be NaN
+	ray_dir:Div(ray_length) -- might return NaN
 
 	-- cross chunk traces
 	local ray_traceresult = nil
@@ -269,11 +269,11 @@ local function detour_trace(trace_func, data, extra)
 			ray_endpos = ray_startpos
 		end
 
-		data.start = ray_startpos
-		data.endpos = ray_endpos
-		data.filter = detour_filter(old_filter, ray_chunk)
+		trace_struct.start = ray_startpos
+		trace_struct.endpos = ray_endpos
+		trace_struct.filter = detour_filter(old_filter, ray_chunk)
 
-		ray_traceresult = trace_func(data, extra)
+		ray_traceresult = trace_func(trace_struct, extra)
 		ray_distance = ray_distance + bounds_length * ray_traceresult.Fraction
 
 		if ray_traceresult.Hit or ray_distance >= ray_length then
@@ -293,19 +293,19 @@ local function detour_trace(trace_func, data, extra)
 	end
 
 	-- restore data (since we modified table)
-	data.start = old_start
-	data.endpos = old_endpos
-	data.filter = old_filter
+	trace_struct.start = old_start
+	trace_struct.endpos = old_endpos
+	trace_struct.filter = old_filter
 
 	return ray_traceresult
 end
 
-detour(util, "TraceLine", function(data)
-	return detour_trace(util.INFMAP_TraceLine, data)
+detour(util, "TraceLine", function(trace_struct)
+	return detour_trace(util.INFMAP_TraceLine, trace_struct)
 end, true)
 
-detour(util, "TraceHull", function(data)
-	return detour_trace(util.INFMAP_TraceHull, data)
+detour(util, "TraceHull", function(trace_struct)
+	return detour_trace(util.INFMAP_TraceHull, trace_struct)
 end, true)
 
 -------------------
