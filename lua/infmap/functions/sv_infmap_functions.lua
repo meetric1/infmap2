@@ -119,7 +119,7 @@ function INFMAP.validate_system(ent, prev)
 	ent.INFMAP_CONSTRAINED = {[1] = ent, ["parent"] = ent}
 
 	if IsValid(prev) then
-		if !INFMAP.merge_system(ent, prev) then return end
+		if !INFMAP.merge_system(ent.INFMAP_CONSTRAINED, prev.INFMAP_CONSTRAINED) then return end
 	end
 
 	-- recurse
